@@ -39,19 +39,17 @@ class QDocument : public QObject {
             Loading,
             Ready,
             Unloading,
-            Error
+            Failed
         };
-        Q_ENUM( Status )
+        Q_ENUM( QDocument::Status )
 
-        enum DocumentError {
+        enum Error {
             NoError,
             UnknownError,
             FileNotFoundError,
-            InvalidFileFormatError,
-            IncorrectPasswordError,
-            UnsupportedSecuritySchemeError
+            IncorrectPasswordError
         };
-        Q_ENUM( DocumentError );
+        Q_ENUM( QDocument::Error )
 
         enum MetaDataField {
             Title,
@@ -93,8 +91,9 @@ class QDocument : public QObject {
         /* Reload the current document */
         void reload();
 
-        /* PDF load status */
+        /* PDF load status and error status */
         QDocument::Status status() const;
+        QDocument::Error error() const;
 
         /* Render and return a page */
         QImage renderPage( int, QSize, QDocumentRenderOptions ) const;
@@ -132,7 +131,7 @@ class QDocument : public QObject {
         qreal mZoom;
 
         Status mStatus;
-        DocumentError mDocError;
+        Error mError;
         bool mPassNeeded;
 
     Q_SIGNALS:

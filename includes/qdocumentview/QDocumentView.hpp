@@ -66,10 +66,12 @@ class QDocumentView : public QAbstractScrollArea {
         explicit QDocumentView( QWidget *parent = nullptr );
         ~QDocumentView();
 
-        void setDocument( QDocument *document );
-        QDocument *document() const;
+        void load( QString );
 
-        QDocumentNavigation *pageNavigation() const;
+        void setDocument( QDocument *document );
+        QDocument * document() const;
+
+        QDocumentNavigation * pageNavigation() const;
 
         bool isLayoutContinuous() const;
         PageLayout pageLayout() const;
@@ -84,6 +86,12 @@ class QDocumentView : public QAbstractScrollArea {
         void setDocumentMargins( QMargins margins );
 
         void searchText( QString str );
+
+        bool showPagesOSD() const;
+        void setShowPagesOSD( bool );
+
+        bool showZoomOSD() const;
+        void setShowZoomOSD( bool );
 
     public Q_SLOTS:
         void setLayoutContinuous( bool );
@@ -125,4 +133,7 @@ class QDocumentView : public QAbstractScrollArea {
         Zoom *mZoomBtn;
         PageWidget *mPagesBtn;
         QProgressBar *progress;
+
+        bool mShowZoom  = true;
+        bool mShowPages = true;
 };

@@ -67,7 +67,7 @@ QString baseName( QString path ) {
 QDocument::QDocument( QString path ) : QObject() {
     mZoom       = 1.0;
     mStatus     = Null;
-    mDocError   = NoError;
+    mError      = NoError;
     mPassNeeded = false;
 
     mDocPath = QFileInfo( path ).absoluteFilePath();
@@ -128,6 +128,11 @@ void QDocument::reload() {
 
 QDocument::Status QDocument::status() const {
     return mStatus;
+}
+
+
+QDocument::Error QDocument::error() const {
+    return mError;
 }
 
 

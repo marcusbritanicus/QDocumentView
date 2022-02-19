@@ -24,6 +24,7 @@
 #include <qdocumentview/QDocumentSearch.hpp>
 #include <qdocumentview/QDocument.hpp>
 #include <qdocumentview/QDocumentNavigation.hpp>
+#include <qdocumentview/PopplerDocument.hpp>
 
 #include "ViewImpl.hpp"
 #include "ViewWidgets.hpp"
@@ -142,56 +143,68 @@ QDocumentView::QDocumentView( QDocumentViewPrivate& dd, QWidget *parent ) : QAbs
 
 
 QDocumentView::~QDocumentView() {
+    delete mZoomBtn;
+    delete mPagesBtn;
+    delete progress;
 }
 
 
-// void QDocumentView::loadDocument( QString path ) {
-//     QDocument *doc = new PopplerDocument( path );
-//
-//     progress->show();
-//     connect(
-//         doc, &Document::loading, [ = ]( int pc ) {
-//             progress->setValue( pc );
-//
-//             if ( pc == 100 ) {
-//                 progress->hide();
-//             }
-//
-//             qApp->processEvents();
-//         }
-//     );
-//
-//     doc->load();
-//
-//     if ( doc->passwordNeeded() ) {
-//         bool ok    = true;
-//         int  count = 0;
-//         do {
-//             QString passwd = QInputDialog::getText(
-//                 this,
-//                 "DesQDocs | Encrypted Document",
-//                 QString( "%1Please enter the document password:" ).arg( count ? "You may have entered the
-// wrong password.<br>" : "" ),
-//                 QLineEdit::Password,
-//                 QString(),
-//                 &ok,
-//                 Qt::WindowFlags(),
-//                 Qt::ImhSensitiveData
-//             );
-//
-//             doc->setPassword( passwd );
-//             count++;
-//         } while ( ok == true and doc->passwordNeeded() );
-//
-//         /* User cancelled loading the document */
-//         if ( not ok ) {
-//             return;
-//         }
-//     }
-//
-//     /* Password has been supplied (if needed), document ready to be loaded */
-//     setDocument( doc );
-// }
+void QDocumentView::load( QString path ) {
+    PopplerDocument *doc = new PopplerDocument( path );
+
+    progress->show();
+    connect(
+        doc, &QDocument::loading, [ = ]( int pc ) {
+            progress->setValue( pc );
+
+            if ( pc == 100 ) {
+                progress->hide();
+            }
+
+            qApp->processEvents();
+        }
+    );
+
+    doc->load();
+
+    switch ( doc->error() ) {
+        case QDocument::NoError: {
+            break;
+        }
+
+        case QDocument::IncorrectPasswordError: {
+            bool ok    = true;
+            int  count = 0;
+            do {
+                QString passwd = QInputDialog::getText(
+                    this,
+                    "Encrypted Document",
+                    QString( "%1Please enter the document password:" ).arg( count ? "You may have entered the wrong password.<br>" : "" ),
+                    QLineEdit::Password,
+                    QString(),
+                    &ok,
+                    Qt::WindowFlags(),
+                    Qt::ImhSensitiveData
+                );
+
+                doc->setPassword( passwd );
+                count++;
+            } while ( ok == true and doc->passwordNeeded() );
+
+            /* User cancelled loading the document */
+            if ( not ok ) {
+                return;
+            }
+        }
+
+        default: {
+            return;
+        }
+    }
+
+    /* Password has been supplied (if needed), document ready to be loaded */
+    setDocument( doc );
+}
 
 
 void QDocumentView::setDocument( QDocument *document ) {
@@ -239,8 +252,14 @@ void QDocumentView::setDocument( QDocument *document ) {
     mPagesBtn->setMaximumPages( document->pageCount() );
     mPagesBtn->setCurrentPage( d->m_pageNavigation->currentPage() );
 
-    mZoomBtn->show();
-    mPagesBtn->show();
+    if ( mShowZoom ) {
+        mZoomBtn->show();
+    }
+
+    if ( mShowPages ) {
+        mPagesBtn->show();
+    }
+
     progress->hide();
 }
 
@@ -428,6 +447,42 @@ void QDocumentView::searchText( QString str ) {
 
     d->m_searchThread->setSearchString( str );
     d->m_searchThread->searchPage( d->m_pageNavigation->currentPage() );
+}
+
+
+bool QDocumentView::showPagesOSD() const {
+    return mShowPages;
+}
+
+
+void QDocumentView::setShowPagesOSD( bool yes ) {
+    mShowPages = yes;
+
+    if ( yes ) {
+        mPagesBtn->show();
+    }
+
+    else {
+        mPagesBtn->hide();
+    }
+}
+
+
+bool QDocumentView::showZoomOSD() const {
+    return mShowZoom;
+}
+
+
+void QDocumentView::setShowZoomOSD( bool yes ) {
+    mShowZoom = yes;
+
+    if ( yes ) {
+        mZoomBtn->show();
+    }
+
+    else {
+        mZoomBtn->hide();
+    }
 }
 
 

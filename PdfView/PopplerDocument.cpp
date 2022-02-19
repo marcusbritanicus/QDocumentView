@@ -36,12 +36,12 @@ PopplerDocument::PopplerDocument( QString pdfPath ) : QDocument( pdfPath ) {
 
 void PopplerDocument::setPassword( QString password ) {
     if ( mPdfDoc->unlock( password.toLatin1(), password.toLatin1() ) ) {
-        mStatus   = Error;
-        mDocError = IncorrectPasswordError;
+        mStatus = Failed;
+        mError  = IncorrectPasswordError;
 
         qDebug() << "Invalid password. Please try again.";
         mPassNeeded = true;
-        emit statusChanged( Error );
+        emit statusChanged( Failed );
         emit passwordRequired();
 
         return;
@@ -49,7 +49,7 @@ void PopplerDocument::setPassword( QString password ) {
 
     mPassNeeded = false;
     mStatus     = Loading;
-    mDocError   = NoError;
+    mError      = NoError;
 
     emit statusChanged( Loading );
 
@@ -66,8 +66,8 @@ void PopplerDocument::setPassword( QString password ) {
         emit loading( 1.0 * i / mPdfDoc->numPages() * 100.0 );
     }
 
-    mStatus   = Ready;
-    mDocError = NoError;
+    mStatus = Ready;
+    mError  = NoError;
 
     emit statusChanged( Ready );
     emit pageCountChanged( mPages.count() );
@@ -105,9 +105,9 @@ void PopplerDocument::load() {
     emit statusChanged( Loading );
 
     if ( not QFile::exists( mDocPath ) ) {
-        mStatus   = Error;
-        mDocError = FileNotFoundError;
-        emit statusChanged( Error );
+        mStatus = Failed;
+        mError  = FileNotFoundError;
+        emit statusChanged( Failed );
 
         return;
     }
@@ -115,21 +115,21 @@ void PopplerDocument::load() {
     mPdfDoc = Poppler::Document::load( mDocPath );
 
     if ( not mPdfDoc ) {
-        mStatus   = Error;
-        mDocError = UnknownError;
+        mStatus = Failed;
+        mError  = UnknownError;
         qDebug() << "Poppler::Document load failed";
-        emit statusChanged( Error );
+        emit statusChanged( Failed );
 
         return;
     }
 
     if ( mPdfDoc->isLocked() ) {
-        mStatus   = Error;
-        mDocError = IncorrectPasswordError;
+        mStatus = Failed;
+        mError  = IncorrectPasswordError;
         qDebug() << "Poppler::Document is locked";
         mPassNeeded = true;
         emit passwordRequired();
-        emit statusChanged( Error );
+        emit statusChanged( Failed );
         return;
     }
 
@@ -146,8 +146,8 @@ void PopplerDocument::load() {
         emit loading( 1.0 * i / mPdfDoc->numPages() * 100.0 );
     }
 
-    mStatus   = Ready;
-    mDocError = NoError;
+    mStatus = Ready;
+    mError  = NoError;
 
     emit statusChanged( Ready );
     emit pageCountChanged( mPages.count() );
