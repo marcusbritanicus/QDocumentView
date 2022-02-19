@@ -19,9 +19,10 @@
  * MA 02110-1301, USA.
  **/
 
-#include "QDocumentRenderer.hpp"
-#include "QDocumentRendererImpl.hpp"
-#include "QDocument.hpp"
+#include <qdocumentview/QDocumentRenderer.hpp>
+#include <qdocumentview/QDocument.hpp>
+
+#include "RendererImpl.hpp"
 
 RenderTask::RenderTask( QDocumentPage *pg, QSize imgSz, QDocumentRenderOptions opts, qint64 id ) {
     mPage    = pg;

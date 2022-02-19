@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "QDocumentView.hpp"
+#include <qdocumentview/QDocumentView.hpp>
 
 #include <QThread>
 #include <QPointer>

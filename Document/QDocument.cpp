@@ -19,9 +19,8 @@
  * MA 02110-1301, USA.
  **/
 
-#include <desq/Utils.hpp>
-
-#include "QDocument.hpp"
+#include <libgen.h>
+#include <qdocumentview/QDocument.hpp>
 
 /*
  * Helper functions

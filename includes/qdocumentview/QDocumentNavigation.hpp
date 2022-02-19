@@ -24,7 +24,7 @@
 #include <QObject>
 #include <private/qobject_p.h>
 
-#include "QDocument.hpp"
+#include <qdocumentview/QDocument.hpp>
 
 class QDocument;
 class QDocumentNavigation;

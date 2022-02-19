@@ -22,7 +22,7 @@
 #pragma once
 
 #include <QtWidgets/qabstractscrollarea.h>
-#include "QDocumentRenderOptions.hpp"
+#include <qdocumentview/QDocumentRenderOptions.hpp>
 
 class Zoom;
 class PageWidget;

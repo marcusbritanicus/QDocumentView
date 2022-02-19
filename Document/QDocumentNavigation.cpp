@@ -19,8 +19,8 @@
  * MA 02110-1301, USA.
  **/
 
-#include "QDocumentNavigation.hpp"
-#include "QDocument.hpp"
+#include <qdocumentview/QDocumentNavigation.hpp>
+#include <qdocumentview/QDocument.hpp>
 
 #include <QPointer>
 

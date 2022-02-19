@@ -19,11 +19,11 @@
  * MA 02110-1301, USA.
  **/
 
-#include "QDocumentView.hpp"
-#include "QDocumentRenderer.hpp"
-#include "QDocumentSearch.hpp"
-#include "QDocument.hpp"
-#include "QDocumentNavigation.hpp"
+#include <qdocumentview/QDocumentView.hpp>
+#include <qdocumentview/QDocumentRenderer.hpp>
+#include <qdocumentview/QDocumentSearch.hpp>
+#include <qdocumentview/QDocument.hpp>
+#include <qdocumentview/QDocumentNavigation.hpp>
 
 #include "ViewImpl.hpp"
 #include "ViewWidgets.hpp"
@@ -333,7 +333,7 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
 qreal QDocumentView::zoomFactor() const {
     Q_D( const QDocumentView );
 
-    return d->m_zoomFactor;
+    return d->zoomFactor();
 }
 
 

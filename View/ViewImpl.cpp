@@ -19,12 +19,13 @@
  * MA 02110-1301, USA.
  **/
 
-#include "QDocumentView.hpp"
+#include <qdocumentview/QDocumentView.hpp>
+#include <qdocumentview/QDocumentRenderer.hpp>
+#include <qdocumentview/QDocument.hpp>
+#include <qdocumentview/QDocumentNavigation.hpp>
+#include <qdocumentview/QDocumentSearch.hpp>
+
 #include "ViewImpl.hpp"
-#include "QDocumentRenderer.hpp"
-#include "QDocument.hpp"
-#include "QDocumentNavigation.hpp"
-#include "QDocumentSearch.hpp"
 
 #include <QGuiApplication>
 #include <QScreen>

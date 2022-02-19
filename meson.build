@@ -48,6 +48,7 @@ Headers = [
     'includes/qdocumentview/QDocumentRenderOptions.hpp',
     'includes/qdocumentview/QDocumentSearch.hpp',
     'includes/qdocumentview/QDocumentView.hpp',
+    'includes/qdocumentview/PopplerDocument.hpp',
 ]
 
 Sources = [
@@ -55,29 +56,22 @@ Sources = [
     'Document/QDocumentNavigation.cpp',
     'Document/QDocumentRenderer.cpp',
     'Document/QDocumentSearch.cpp',
+    'PdfView/PopplerDocument.cpp',
     'View/QDocumentView.cpp',
     'View/ViewImpl.cpp',
     'View/ViewWidgets.cpp',
 ]
 
 Mocs = Qt.compile_moc(
- 		headers : [ Headers, 'Document/QDocumentRendererImpl.hpp', 'View/ViewImpl.hpp', 'View/ViewWidgets.hpp' ],
+ 		headers : [ Headers, 'Document/RendererImpl.hpp', 'View/ViewImpl.hpp', 'View/ViewWidgets.hpp' ],
 	 	dependencies: Deps
 )
-includes = [ 'includes/qdocumentview', 'Document', 'View' ]
-
-# configure_file(
-# 		input : 'config.h.in',
-#     output : 'desq-config.h',
-# 		install: true,
-#     install_dir: join_paths( 'include', 'desq' ),
-#     configuration : conf_data
-# )
+Includes = [ 'includes', 'Document', 'View' ]
 
 qdocview = shared_library(
     libName, [ Sources, Mocs ],
 		version: meson.project_version(),
-		include_directories: [ includes ],
+		include_directories: [ Includes ],
     dependencies: Deps,
     install: true,
     install_dir: join_paths( get_option( 'libdir' ) )

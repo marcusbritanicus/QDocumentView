@@ -19,8 +19,8 @@
  * MA 02110-1301, USA.
  **/
 
-#include "QDocument.hpp"
-#include "QDocumentSearch.hpp"
+#include <qdocumentview/QDocument.hpp>
+#include <qdocumentview/QDocumentSearch.hpp>
 
 QDocumentSearch::QDocumentSearch( QObject *parent )
     : QThread( parent )

@@ -25,7 +25,7 @@
 #include <QtGui>
 #include <QtWidgets>
 
-#include "QDocumentRenderOptions.hpp"
+#include <qdocumentview/QDocumentRenderOptions.hpp>
 
 class QDocumentPage;
 typedef QList<QDocumentPage *> QDocumentPages;
