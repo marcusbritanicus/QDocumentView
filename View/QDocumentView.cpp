@@ -25,6 +25,7 @@
 #include <qdocumentview/QDocument.hpp>
 #include <qdocumentview/QDocumentNavigation.hpp>
 #include <qdocumentview/PopplerDocument.hpp>
+#include <qdocumentview/DjVuDocument.hpp>
 
 #include "ViewImpl.hpp"
 #include "ViewWidgets.hpp"
@@ -150,7 +151,14 @@ QDocumentView::~QDocumentView() {
 
 
 void QDocumentView::load( QString path ) {
-    PopplerDocument *doc = new PopplerDocument( path );
+    QDocument *doc;
+    if ( path.toLower().endsWith( "pdf" ) ) {
+        doc = new PopplerDocument( path );
+    }
+
+    else if ( path.toLower().endsWith( "djv" ) or path.toLower().endsWith( "djvu" ) ) {
+        doc = new DjVuDocument( path );
+    }
 
     progress->show();
     connect(

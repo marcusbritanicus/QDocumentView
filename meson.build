@@ -38,8 +38,8 @@ elif get_option('use_qt_version') == 'qt6'
     libName   = 'Qt6DocumentView'
 
 endif
-
-Deps = [ QtCore, QtGui, QtWidgets, QtNetwork, QtPrint, Poppler ]
+DjVuLibre = dependency( 'ddjvuapi' )
+Deps = [ QtCore, QtGui, QtWidgets, QtNetwork, QtPrint, Poppler, DjVuLibre ]
 
 Headers = [
     'includes/qdocumentview/QDocument.hpp',
@@ -48,6 +48,7 @@ Headers = [
     'includes/qdocumentview/QDocumentRenderOptions.hpp',
     'includes/qdocumentview/QDocumentSearch.hpp',
     'includes/qdocumentview/QDocumentView.hpp',
+    'includes/qdocumentview/DjVuDocument.hpp',
     'includes/qdocumentview/PopplerDocument.hpp',
 ]
 
@@ -56,6 +57,7 @@ Sources = [
     'Document/QDocumentNavigation.cpp',
     'Document/QDocumentRenderer.cpp',
     'Document/QDocumentSearch.cpp',
+    'DjView/DjVuDocument.cpp',
     'PdfView/PopplerDocument.cpp',
     'View/QDocumentView.cpp',
     'View/ViewImpl.cpp',

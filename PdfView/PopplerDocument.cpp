@@ -157,6 +157,8 @@ void PopplerDocument::load() {
 
 void PopplerDocument::close() {
     mStatus = Unloading;
+    emit statusChanged( Unloading );
+
     mPages.clear();
     mZoom = 1.0;
 

@@ -172,6 +172,6 @@ class QDocumentPage {
         /* Thumbnail of the page */
         virtual QImage thumbnail() const = 0;
 
-    private:
+    protected:
         int mPageNo = -1;
 };
