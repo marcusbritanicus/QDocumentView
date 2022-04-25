@@ -88,11 +88,41 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( *new QDoc
     connect(
         mZoomBtn, &Zoom::clicked, [ = ]( QString action ) {
             if ( action == "enlarge" ) {
-                setZoomFactor( d->m_zoomFactor * 1.10 );
+                /**
+                 * Check if the next zoom factor is greater than zoomFactor for FitInView
+                 * If yes, set the zoom to Fit the page in view.
+                 */
+                if ( false ) {
+                    //
+                }
+
+                /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
+                else if ( false ) {
+                    //
+                }
+
+                else {
+                    setZoomFactor( d->m_zoomFactor * 1.10 );
+                }
             }
 
             else {
-                setZoomFactor( d->m_zoomFactor / 1.10 );
+                /**
+                 * Check if the next zoom factor is greater than zoomFactor for FitInView
+                 * If yes, set the zoom to Fit the page in view.
+                 */
+                if ( false ) {
+                    //
+                }
+
+                /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
+                else if ( false ) {
+                    //
+                }
+
+                else {
+                    setZoomFactor( d->m_zoomFactor / 1.10 );
+                }
             }
 
             mZoomBtn->setEnlargeEnabled( d->m_zoomFactor < 4.0 ? true : false );
@@ -152,12 +182,18 @@ QDocumentView::~QDocumentView() {
 
 void QDocumentView::load( QString path ) {
     QDocument *doc;
+
     if ( path.toLower().endsWith( "pdf" ) ) {
         doc = new PopplerDocument( path );
     }
 
     else if ( path.toLower().endsWith( "djv" ) or path.toLower().endsWith( "djvu" ) ) {
         doc = new DjVuDocument( path );
+    }
+
+    else {
+        qDebug() << "Unknown document type:" << path;
+        return;
     }
 
     progress->show();
@@ -296,6 +332,10 @@ bool QDocumentView::isLayoutContinuous() const {
 void QDocumentView::setLayoutContinuous( bool yes ) {
     Q_D( QDocumentView );
 
+    if ( not d->m_document ) {
+        return;
+    }
+
     if ( d->m_continuous == yes ) {
         return;
     }
@@ -317,6 +357,10 @@ QDocumentView::PageLayout QDocumentView::pageLayout() const {
 void QDocumentView::setPageLayout( PageLayout lyt ) {
     Q_D( QDocumentView );
 
+    if ( not d->m_document ) {
+        return;
+    }
+
     if ( d->m_pageLayout == lyt ) {
         return;
     }
@@ -337,6 +381,10 @@ QDocumentView::ZoomMode QDocumentView::zoomMode() const {
 
 void QDocumentView::setZoomMode( ZoomMode mode ) {
     Q_D( QDocumentView );
+
+    if ( not d->m_document ) {
+        return;
+    }
 
     if ( d->m_zoomMode == mode ) {
         return;
@@ -367,6 +415,10 @@ qreal QDocumentView::zoomFactor() const {
 void QDocumentView::setRenderOptions( QDocumentRenderOptions opts ) {
     Q_D( QDocumentView );
 
+    if ( not d->m_document ) {
+        return;
+    }
+
     if ( d->m_renderOpts == opts ) {
         return;
     }
@@ -386,6 +438,10 @@ QDocumentRenderOptions QDocumentView::renderOptions() const {
 
 void QDocumentView::setZoomFactor( qreal factor ) {
     Q_D( QDocumentView );
+
+    if ( not d->m_document ) {
+        return;
+    }
 
     if ( d->m_zoomFactor == factor ) {
         return;
@@ -416,6 +472,10 @@ int QDocumentView::pageSpacing() const {
 void QDocumentView::setPageSpacing( int spacing ) {
     Q_D( QDocumentView );
 
+    if ( not d->m_document ) {
+        return;
+    }
+
     if ( d->m_pageSpacing == spacing ) {
         return;
     }
@@ -436,6 +496,10 @@ QMargins QDocumentView::documentMargins() const {
 
 void QDocumentView::setDocumentMargins( QMargins margins ) {
     Q_D( QDocumentView );
+
+    if ( not d->m_document ) {
+        return;
+    }
 
     if ( d->m_documentMargins == margins ) {
         return;
@@ -464,7 +528,13 @@ bool QDocumentView::showPagesOSD() const {
 
 
 void QDocumentView::setShowPagesOSD( bool yes ) {
+    Q_D( QDocumentView );
+
     mShowPages = yes;
+
+    if ( not d->m_document ) {
+        return;
+    }
 
     if ( yes ) {
         mPagesBtn->show();
@@ -482,7 +552,13 @@ bool QDocumentView::showZoomOSD() const {
 
 
 void QDocumentView::setShowZoomOSD( bool yes ) {
+    Q_D( QDocumentView );
+
     mShowZoom = yes;
+
+    if ( not d->m_document ) {
+        return;
+    }
 
     if ( yes ) {
         mZoomBtn->show();
@@ -526,32 +602,32 @@ void QDocumentView::resizeEvent( QResizeEvent *event ) {
     QAbstractScrollArea::resizeEvent( event );
     qApp->processEvents();
 
-    if ( mZoomBtn and mZoomBtn->isVisible() ) {
-        mZoomBtn->move( 5, viewport()->height() - mZoomBtn->height() - 5 );
-    }
-
-
-    if ( mPagesBtn ) {
-        mPagesBtn->move( viewport()->width() - mPagesBtn->width() - 5, viewport()->height() - mPagesBtn->height() - 5 );
-    }
-
-
-    d->updateScrollBars();
-
-    qApp->processEvents();
-
-    if ( d->pendingResize ) {
-        return;
-    }
-
-    d->pendingResize = true;
-    QTimer::singleShot(
-        250, [ d, this ]() {
-            d->calculateViewport();
-            d->pendingResize = false;
-            viewport()->update();
+    if ( d->m_document ) {
+        if ( mZoomBtn and mZoomBtn->isVisible() ) {
+            mZoomBtn->move( 5, viewport()->height() - mZoomBtn->height() - 5 );
         }
-    );
+
+        if ( mPagesBtn and mPagesBtn->isVisible() ) {
+            mPagesBtn->move( viewport()->width() - mPagesBtn->width() - 5, viewport()->height() - mPagesBtn->height() - 5 );
+        }
+
+        d->updateScrollBars();
+
+        qApp->processEvents();
+
+        if ( d->pendingResize ) {
+            return;
+        }
+
+        d->pendingResize = true;
+        QTimer::singleShot(
+            250, [ d, this ]() {
+                d->calculateViewport();
+                d->pendingResize = false;
+                viewport()->update();
+            }
+        );
+    }
 }
 
 

@@ -84,8 +84,9 @@ void DjVuDocument::load() {
     mDjDoc = ddjvu_document_create_by_filename( mDjCtx, mDocPath.toLocal8Bit().data(), 1 );
 
     /* Wait for decoding to be complete */
-	ddjvu_job_t *job = ddjvu_document_job( mDjDoc );
-	ddjvu_message_wait( mDjCtx );
+    ddjvu_job_t *job = ddjvu_document_job( mDjDoc );
+
+    ddjvu_message_wait( mDjCtx );
 
     if ( ddjvu_job_status( job ) == DDJVU_JOB_FAILED ) {
         mStatus = Failed;
@@ -107,20 +108,21 @@ void DjVuDocument::load() {
     // }
 
     ddjvu_message_wait( mDjCtx );
-	int pages = 0;
-	pages = ddjvu_document_get_pagenum( mDjDoc );
+    int pages = 0;
+
+    pages = ddjvu_document_get_pagenum( mDjDoc );
 
     /* DjVu page ptr */
-	ddjvu_page_t *pg;
-	/* DjVu page job ptr */
-	ddjvu_job_t *pgjob;
+    ddjvu_page_t *pg;
+    /* DjVu page job ptr */
+    ddjvu_job_t *pgjob;
 
     for ( int i = 0; i < pages; i++ ) {
-        pg            = ddjvu_page_create_by_pageno( mDjDoc, i );
+        pg    = ddjvu_page_create_by_pageno( mDjDoc, i );
         pgjob = ddjvu_page_job( pg );
 
         while ( ddjvu_job_status( pgjob ) < DDJVU_JOB_OK ) {
-			continue;
+            continue;
         }
 
         DjPage *page = new DjPage( i, mDjDoc );
@@ -173,10 +175,10 @@ void DjPage::setPageData( void *data ) {
     /* Job Status */
     ddjvu_status_t r;
 
-	/* DjVu page info struct */
-	ddjvu_pageinfo_t info;
+    /* DjVu page info struct */
+    ddjvu_pageinfo_t info;
 
-    while ( ( r = ddjvu_document_get_pageinfo_imp( mDjDoc, mPageNo, &info, sizeof( ddjvu_pageinfo_t ) ) ) < DDJVU_JOB_OK ) {
+    while ( (r = ddjvu_document_get_pageinfo_imp( mDjDoc, mPageNo, &info, sizeof(ddjvu_pageinfo_t) ) ) < DDJVU_JOB_OK ) {
         // Decoding...
     }
 
@@ -194,19 +196,19 @@ QSizeF DjPage::pageSize( qreal zoom ) const {
 
 
 QImage DjPage::thumbnail() const {
-
-    int width = 128;
+    int width  = 128;
     int height = 128;
 
-    unsigned int masks[ 4 ] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
-	ddjvu_format_t *fmt = ddjvu_format_create( DDJVU_FORMAT_RGBMASK32, 4, masks );
+    unsigned int   masks[ 4 ] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
+    ddjvu_format_t *fmt       = ddjvu_format_create( DDJVU_FORMAT_RGBMASK32, 4, masks );
 
-    if( ddjvu_thumbnail_status( mDjDoc, mPageNo, 1 ) >= DDJVU_JOB_FAILED ) {
+    if ( ddjvu_thumbnail_status( mDjDoc, mPageNo, 1 ) >= DDJVU_JOB_FAILED ) {
         return QImage();
     }
 
     QImage img( width, height, QImage::Format_RGB32 );
-    if ( not ddjvu_thumbnail_render( mDjDoc, mPageNo, &width, &height, fmt, img.bytesPerLine(), (char*)img.bits() ) ) {
+
+    if ( not ddjvu_thumbnail_render( mDjDoc, mPageNo, &width, &height, fmt, img.bytesPerLine(), (char *)img.bits() ) ) {
         return QImage();
     }
 
@@ -216,23 +218,25 @@ QImage DjPage::thumbnail() const {
 
 QImage DjPage::render( QSize pSize, QDocumentRenderOptions opts ) const {
     /* DjVu page render format */
-	unsigned int masks[ 4 ] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
-	ddjvu_format_t *fmt = ddjvu_format_create( DDJVU_FORMAT_RGBMASK32, 4, masks );
+    unsigned int   masks[ 4 ] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
+    ddjvu_format_t *fmt       = ddjvu_format_create( DDJVU_FORMAT_RGBMASK32, 4, masks );
 
     ddjvu_page_set_rotation( m_page, (ddjvu_page_rotation_t)opts.rotation() );
 
     ddjvu_rect_t rect;
-	rect.w = pSize.width();
+
+    rect.w = pSize.width();
     rect.h = pSize.height();
-	rect.x = 0;
-	rect.y = 0;
+    rect.x = 0;
+    rect.y = 0;
 
     /* Make DjVu decoder follow X11 conventions: Why? Because DjView4 does so... :P */
     ddjvu_format_set_row_order( fmt, true );
     ddjvu_format_set_y_direction( fmt, true );
 
     QImage image( pSize.width(), pSize.height(), QImage::Format_RGB32 );
-    if ( not ddjvu_page_render( m_page, DDJVU_RENDER_COLOR, &rect, &rect, fmt, image.bytesPerLine(), (char*)image.bits() ) ) {
+
+    if ( not ddjvu_page_render( m_page, DDJVU_RENDER_COLOR, &rect, &rect, fmt, image.bytesPerLine(), (char *)image.bits() ) ) {
         return QImage();
     }
 
@@ -241,7 +245,7 @@ QImage DjPage::render( QSize pSize, QDocumentRenderOptions opts ) const {
 
 
 QImage DjPage::render( qreal zoomFactor, QDocumentRenderOptions opts ) const {
-    return render( ( mPageSize * zoomFactor ).toSize(), opts );
+    return render( (mPageSize * zoomFactor).toSize(), opts );
 }
 
 

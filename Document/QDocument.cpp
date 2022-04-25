@@ -164,6 +164,14 @@ QDocumentPage * QDocument::page( int pageNo ) const {
         return nullptr;
     }
 
+    if ( pageNo < 0 ) {
+        return nullptr;
+    }
+
+    if ( not mPages.count() ) {
+        return nullptr;
+    }
+
     return mPages.at( pageNo );
 }
 

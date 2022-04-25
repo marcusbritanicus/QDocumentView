@@ -33,7 +33,13 @@ RenderTask::RenderTask( QDocumentPage *pg, QSize imgSz, QDocumentRenderOptions o
 
 
 int RenderTask::pageNumber() {
-    return mPage->pageNo();
+    if ( mPage ) {
+        return mPage->pageNo();
+    }
+
+    else {
+        return -1;
+    }
 }
 
 
@@ -56,6 +62,11 @@ void RenderTask::invalidate() {
 void RenderTask::run() {
     /* If this task has been invalidated */
     if ( mId < 0 ) {
+        return;
+    }
+
+    /* If this page is null, do nothing */
+    if ( mPage == nullptr ) {
         return;
     }
 
