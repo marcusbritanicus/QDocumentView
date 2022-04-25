@@ -1,23 +1,11 @@
 image: archlinux:latest
 
 before_script:
-    - pacman -Syu --noconfirm && pacman -S --noconfirm git gcc cmake make qt5-base qt5-connectivity qt5-webengine
+    - pacman -Syu --noconfirm
+    - pacman -S --noconfirm pkgconf gcc cmake extra-cmake-modules make git qt5-base meson ninja qt5-svg poppler-qt5 qt5-tools djvulibre
 
 build_amd64:
   stage: build
   script:
-    - mkdir depends
-    - git clone https://gitlab.com/cubocore/libcprime/ depends/libcprime
-    - git clone https://gitlab.com/cubocore/libcsys/ depends/libcsys
-    - cd depends/libcprime
-    - mkdir build && cd build
-    - cmake ..
-    - make -j$(nproc) && make install
-    - cd ../../libcsys
-    - mkdir build && cd build
-    - cmake ..
-    - make -j$(nproc) && make install
-    - cd ../../..
-    - mkdir build && cd build
-    - cmake ..
-    - make -j$(nproc) && make install
+      - meson .build --prefix=/usr --buildtype=release
+      - ninja -C .build -j 4 -k 0 && ninja -C .build install
