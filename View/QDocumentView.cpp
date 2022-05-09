@@ -573,6 +573,11 @@ void QDocumentView::setShowZoomOSD( bool yes ) {
 void QDocumentView::paintEvent( QPaintEvent *event ) {
     Q_D( QDocumentView );
 
+    if ( not d->m_document ) {
+        QAbstractScrollArea::paintEvent( event );
+        return;
+    }
+
     QPainter painter( viewport() );
 
     painter.fillRect( event->rect(), palette().brush( QPalette::Dark ) );
@@ -599,8 +604,7 @@ void QDocumentView::paintEvent( QPaintEvent *event ) {
 void QDocumentView::resizeEvent( QResizeEvent *event ) {
     Q_D( QDocumentView );
 
-    QAbstractScrollArea::resizeEvent( event );
-    qApp->processEvents();
+    event->accept();
 
     if ( d->m_document ) {
         if ( mZoomBtn and mZoomBtn->isVisible() ) {
