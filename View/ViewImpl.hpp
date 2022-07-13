@@ -21,23 +21,19 @@
 
 #pragma once
 
-#include <qdocumentview/QDocumentView.hpp>
-
 #include <QThread>
 #include <QPointer>
-#include <QtWidgets/private/qabstractscrollarea_p.h>
 
 class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocument;
 class QDocumentSearch;
+class QDocumentView;
 
-class QDocumentViewPrivate : public QAbstractScrollAreaPrivate {
-    Q_DECLARE_PUBLIC( QDocumentView );
-
+class QDocumentViewImpl {
     public:
-        QDocumentViewPrivate();
-        ~QDocumentViewPrivate();
+        QDocumentViewImpl( QDocumentView *view );
+        ~QDocumentViewImpl();
 
         void init();
 
@@ -92,9 +88,11 @@ class QDocumentViewPrivate : public QAbstractScrollAreaPrivate {
         QDocumentSearch *m_searchThread;
         QHash<int, QVector<QRectF> > searchRects;
 
+        QDocumentView *publ;
+
         qreal m_screenResolution; // pixels per point
         bool pendingResize = false;
 };
 
 
-Q_DECLARE_TYPEINFO( QDocumentViewPrivate::DocumentLayout, Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( QDocumentViewImpl::DocumentLayout, Q_MOVABLE_TYPE );

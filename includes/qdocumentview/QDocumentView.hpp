@@ -32,7 +32,7 @@ class QDocument;
 class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocumentView;
-class QDocumentViewPrivate;
+class QDocumentViewImpl;
 
 class QDocumentView : public QAbstractScrollArea {
     Q_OBJECT;
@@ -117,8 +117,6 @@ class QDocumentView : public QAbstractScrollArea {
         void searchComplete( int numMatches );
 
     protected:
-        explicit QDocumentView( QDocumentViewPrivate&, QWidget * );
-
         void paintEvent( QPaintEvent *event ) override;
         void resizeEvent( QResizeEvent *event ) override;
         void scrollContentsBy( int dx, int dy ) override;
@@ -128,7 +126,7 @@ class QDocumentView : public QAbstractScrollArea {
         void wheelEvent( QWheelEvent *wEvent );
 
     private:
-        Q_DECLARE_PRIVATE( QDocumentView );
+        QDocumentViewImpl *impl;
 
         Zoom *mZoomBtn;
         PageWidget *mPagesBtn;

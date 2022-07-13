@@ -33,19 +33,20 @@
 #include <QScroller>
 
 
-QDocumentViewPrivate::QDocumentViewPrivate(): QAbstractScrollAreaPrivate() {
-    m_continuous         = true;
-    m_pageLayout         = QDocumentView::SinglePage;
-    m_zoomMode           = QDocumentView::CustomZoom;
-    m_zoomFactor         = 1.0;
-    m_pageSpacing        = 3;
-    m_documentMargins    = QMargins( 6, 6, 6, 6 );
-    m_blockPageScrolling = false;
+QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
+    publ                 = view;                        // Pointer to the public class
+    m_continuous         = true;                        // Continuous layout
+    m_pageLayout         = QDocumentView::SinglePage;   // Draw only one page (single column)
+    m_zoomMode           = QDocumentView::CustomZoom;   // Start with a custom zoom of 1.0
+    m_zoomFactor         = 1.0;                         // Zoom factor for custom zoom
+    m_pageSpacing        = 3;                           // Default space between two pages
+    m_documentMargins    = QMargins( 6, 6, 6, 6 );      // Page margins
+    m_blockPageScrolling = false;                       // Flag to handle setting current page
     m_screenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
 }
 
 
-QDocumentViewPrivate::~QDocumentViewPrivate() {
+QDocumentViewImpl::~QDocumentViewImpl() {
     delete m_document;
     delete m_pageNavigation;
     delete m_pageRenderer;
@@ -55,31 +56,25 @@ QDocumentViewPrivate::~QDocumentViewPrivate() {
 }
 
 
-void QDocumentViewPrivate::init() {
-    Q_Q( QDocumentView );
-
-    m_pageNavigation = new QDocumentNavigation( q );
-    m_pageRenderer   = new QDocumentRenderer( q );
-    m_searchThread   = new QDocumentSearch( q );
+void QDocumentViewImpl::init() {
+    m_pageNavigation = new QDocumentNavigation( publ );
+    m_pageRenderer   = new QDocumentRenderer( publ );
+    m_searchThread   = new QDocumentSearch( publ );
 }
 
 
-void QDocumentViewPrivate::documentStatusChanged() {
-    Q_Q( QDocumentView );
-
+void QDocumentViewImpl::documentStatusChanged() {
     updateDocumentLayout();
-    q->viewport()->update();
+    publ->viewport()->update();
 }
 
 
-void QDocumentViewPrivate::currentPageChanged( int currentPage ) {
-    Q_Q( QDocumentView );
-
+void QDocumentViewImpl::currentPageChanged( int currentPage ) {
     if ( m_blockPageScrolling ) {
         return;
     }
 
-    q->verticalScrollBar()->setValue( yPositionForPage( currentPage ) );
+    publ->verticalScrollBar()->setValue( yPositionForPage( currentPage ) );
 
     if ( m_pageLayout == QDocumentView::SinglePage ) {
         invalidateDocumentLayout();
@@ -87,25 +82,21 @@ void QDocumentViewPrivate::currentPageChanged( int currentPage ) {
 }
 
 
-void QDocumentViewPrivate::calculateViewport() {
-    Q_Q( QDocumentView );
-
+void QDocumentViewImpl::calculateViewport() {
     if ( not m_document ) {
         return;
     }
 
-    const int x      = q->horizontalScrollBar()->value();
-    const int y      = q->verticalScrollBar()->value();
-    const int width  = q->viewport()->width();
-    const int height = q->viewport()->height();
+    const int x      = publ->horizontalScrollBar()->value();
+    const int y      = publ->verticalScrollBar()->value();
+    const int width  = publ->viewport()->width();
+    const int height = publ->viewport()->height();
 
     setViewport( QRect( x, y, width, height ) );
 }
 
 
-void QDocumentViewPrivate::setViewport( QRect viewport ) {
-    Q_Q( QDocumentView );
-
+void QDocumentViewImpl::setViewport( QRect viewport ) {
     if ( m_viewport == viewport ) {
         return;
     }
@@ -118,7 +109,7 @@ void QDocumentViewPrivate::setViewport( QRect viewport ) {
         updateDocumentLayout();
 
         if ( m_zoomMode != QDocumentView::CustomZoom ) {
-            q->viewport()->update();
+            publ->viewport()->update();
         }
     }
 
@@ -147,28 +138,24 @@ void QDocumentViewPrivate::setViewport( QRect viewport ) {
 }
 
 
-void QDocumentViewPrivate::updateScrollBars() {
-    Q_Q( QDocumentView );
-
-    const QSize p = q->viewport()->size();
+void QDocumentViewImpl::updateScrollBars() {
+    const QSize p = publ->viewport()->size();
     const QSize v = m_documentLayout.documentSize;
 
-    q->horizontalScrollBar()->setRange( 0, v.width() - p.width() );
-    q->horizontalScrollBar()->setPageStep( p.width() );
-    q->verticalScrollBar()->setRange( 0, v.height() - p.height() );
-    q->verticalScrollBar()->setPageStep( p.height() );
+    publ->horizontalScrollBar()->setRange( 0, v.width() - p.width() );
+    publ->horizontalScrollBar()->setPageStep( p.width() );
+    publ->verticalScrollBar()->setRange( 0, v.height() - p.height() );
+    publ->verticalScrollBar()->setPageStep( p.height() );
 }
 
 
-void QDocumentViewPrivate::invalidateDocumentLayout() {
-    Q_Q( QDocumentView );
-
+void QDocumentViewImpl::invalidateDocumentLayout() {
     updateDocumentLayout();
-    q->viewport()->update();
+    publ->viewport()->update();
 }
 
 
-QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayout() const {
+QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayout() const {
     switch ( m_pageLayout ) {
         /** One column */
         case QDocumentView::SinglePage: {
@@ -191,11 +178,11 @@ QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayo
         }
     }
 
-    return QDocumentViewPrivate::DocumentLayout();
+    return QDocumentViewImpl::DocumentLayout();
 }
 
 
-QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayoutSingle() const {
+QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSingle() const {
     DocumentLayout documentLayout;
 
     if ( !m_document || (m_document->status() != QDocument::Ready) ) {
@@ -276,7 +263,7 @@ QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayo
 }
 
 
-QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayoutFacing() const {
+QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFacing() const {
     DocumentLayout documentLayout;
 
     if ( !m_document || (m_document->status() != QDocument::Ready) ) {
@@ -406,7 +393,7 @@ QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayo
 }
 
 
-QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayoutBook() const {
+QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook() const {
     DocumentLayout documentLayout;
 
     if ( !m_document || (m_document->status() != QDocument::Ready) ) {
@@ -597,14 +584,14 @@ QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayo
 }
 
 
-QDocumentViewPrivate::DocumentLayout QDocumentViewPrivate::calculateDocumentLayoutOverview() const {
+QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutOverview() const {
     DocumentLayout docLyt;
 
     return docLyt;
 }
 
 
-qreal QDocumentViewPrivate::yPositionForPage( int pageNumber ) const {
+qreal QDocumentViewImpl::yPositionForPage( int pageNumber ) const {
     const auto it = m_documentLayout.pageGeometries.constFind( pageNumber );
 
     if ( it == m_documentLayout.pageGeometries.cend() ) {
@@ -615,14 +602,14 @@ qreal QDocumentViewPrivate::yPositionForPage( int pageNumber ) const {
 }
 
 
-void QDocumentViewPrivate::updateDocumentLayout() {
+void QDocumentViewImpl::updateDocumentLayout() {
     m_documentLayout = calculateDocumentLayout();
 
     updateScrollBars();
 }
 
 
-qreal QDocumentViewPrivate::zoomFactor() const {
+qreal QDocumentViewImpl::zoomFactor() const {
     int page = m_pageNavigation->currentPage();
 
     QSize pageSize;
@@ -650,7 +637,7 @@ qreal QDocumentViewPrivate::zoomFactor() const {
 }
 
 
-void QDocumentViewPrivate::paintSearchRects( int page, QImage& img ) {
+void QDocumentViewImpl::paintSearchRects( int page, QImage& img ) {
     /** Search Rects */
     if ( searchRects.contains( page ) ) {
         QColor hPen   = qApp->palette().color( QPalette::Highlight );
