@@ -22,13 +22,11 @@
 #pragma once
 
 #include <QObject>
-#include <private/qobject_p.h>
-
 #include <qdocumentview/QDocument.hpp>
 
 class QDocument;
 class QDocumentNavigation;
-class QDocumentNavigationPrivate;
+class QDocumentNavigationImpl;
 
 class QDocumentNavigation : public QObject {
     Q_OBJECT;
@@ -67,71 +65,5 @@ class QDocumentNavigation : public QObject {
         void canGoToNextPageChanged( bool canGo );
 
     private:
-        Q_DECLARE_PRIVATE( QDocumentNavigation );
-};
-
-class QDocumentNavigationPrivate : public QObjectPrivate {
-    public:
-        QDocumentNavigationPrivate() : QObjectPrivate() {
-        }
-
-        void update() {
-            Q_Q( QDocumentNavigation );
-
-            const bool documentAvailable = m_document && m_document->status() == QDocument::Ready;
-
-            if ( documentAvailable ) {
-                const int newPageCount = m_document->pageCount();
-
-                if ( m_pageCount != newPageCount ) {
-                    m_pageCount = newPageCount;
-                    emit q->pageCountChanged( m_pageCount );
-                }
-            }
-
-            else {
-                if ( m_pageCount != 0 ) {
-                    m_pageCount = 0;
-                    emit q->pageCountChanged( m_pageCount );
-                }
-            }
-
-            if ( m_currentPage != 0 ) {
-                m_currentPage = 0;
-                emit q->currentPageChanged( m_currentPage );
-            }
-
-            updatePrevNext();
-        }
-
-        void updatePrevNext() {
-            Q_Q( QDocumentNavigation );
-
-            const bool hasPreviousPage = m_currentPage > 0;
-            const bool hasNextPage     = m_currentPage < (m_pageCount - 1);
-
-            if ( m_canGoToPreviousPage != hasPreviousPage ) {
-                m_canGoToPreviousPage = hasPreviousPage;
-                emit q->canGoToPreviousPageChanged( m_canGoToPreviousPage );
-            }
-
-            if ( m_canGoToNextPage != hasNextPage ) {
-                m_canGoToNextPage = hasNextPage;
-                emit q->canGoToNextPageChanged( m_canGoToNextPage );
-            }
-        }
-
-        void documentStatusChanged() {
-            update();
-        }
-
-        Q_DECLARE_PUBLIC( QDocumentNavigation );
-
-        QPointer<QDocument> m_document = nullptr;
-        int m_currentPage          = 0;
-        int m_pageCount            = 0;
-        bool m_canGoToPreviousPage = false;
-        bool m_canGoToNextPage     = false;
-
-        QMetaObject::Connection m_documentStatusChangedConnection;
+        QDocumentNavigationImpl *impl;
 };

@@ -17,10 +17,7 @@ add_project_link_arguments( ['-rdynamic','-fPIC'], language:'cpp' )
 
 if get_option('use_qt_version') == 'qt5'
 		Qt = import( 'qt5' )
-		QtCore    = dependency( 'qt5', modules: [ 'Core' ], private_headers: [ 'Core' ] )
-    QtGui     = dependency( 'qt5', modules: [ 'Gui' ], private_headers: [ 'Gui' ] )
-    QtWidgets = dependency( 'qt5', modules: [ 'Widgets' ], private_headers: [ 'Widgets' ] )
-    QtNetwork = dependency( 'qt5', modules: [ 'Network' ] )
+		QtBase    = dependency( 'qt5', modules: [ 'Core', 'Gui', 'Widgets' ] )
     QtPrint   = dependency( 'qt5', modules: [ 'PrintSupport' ] )
     Poppler   = dependency( 'poppler-qt5' )
 
@@ -28,18 +25,16 @@ if get_option('use_qt_version') == 'qt5'
 
 elif get_option('use_qt_version') == 'qt6'
 		Qt = import( 'qt6' )
-		QtCore    = dependency( 'qt6', modules: [ 'Core' ], private_headers: [ 'Core' ] )
-    QtGui     = dependency( 'qt6', modules: [ 'Gui' ], private_headers: [ 'Gui' ] )
-    QtWidgets = dependency( 'qt6', modules: [ 'Widgets' ], private_headers: [ 'Widgets' ] )
-    QtNetwork = dependency( 'qt6', modules: [ 'Network' ] )
+		QtBase    = dependency( 'qt6', modules: [ 'Core', 'Gui', 'Widgets' ] )
     QtPrint   = dependency( 'qt6', modules: [ 'PrintSupport' ] )
     Poppler   = dependency( 'poppler-qt6' )
 
     libName   = 'Qt6DocumentView'
 
 endif
+
 DjVuLibre = dependency( 'ddjvuapi' )
-Deps = [ QtCore, QtGui, QtWidgets, QtNetwork, QtPrint, Poppler, DjVuLibre ]
+Deps = [ QtBase, QtPrint, Poppler, DjVuLibre ]
 
 Headers = [
     'includes/qdocumentview/QDocument.hpp',
@@ -50,6 +45,13 @@ Headers = [
     'includes/qdocumentview/QDocumentView.hpp',
     'includes/qdocumentview/DjVuDocument.hpp',
     'includes/qdocumentview/PopplerDocument.hpp',
+]
+
+ImplHeaders = [
+	'Document/QDocumentNavigationImpl.hpp',
+	'Document/RendererImpl.hpp',
+	'View/ViewImpl.hpp',
+	'View/ViewWidgets.hpp'
 ]
 
 Sources = [
@@ -65,7 +67,7 @@ Sources = [
 ]
 
 Mocs = Qt.compile_moc(
- 		headers : [ Headers, 'Document/RendererImpl.hpp', 'View/ViewImpl.hpp', 'View/ViewWidgets.hpp' ],
+ 		headers : [ Headers, ImplHeaders ],
 	 	dependencies: Deps
 )
 Includes = [ 'includes', 'Document', 'View' ]

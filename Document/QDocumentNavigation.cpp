@@ -22,105 +22,94 @@
 #include <qdocumentview/QDocumentNavigation.hpp>
 #include <qdocumentview/QDocument.hpp>
 
+#include "QDocumentNavigationImpl.hpp"
+
 #include <QPointer>
 
-QDocumentNavigation::QDocumentNavigation( QObject *parent ) : QObject( *new QDocumentNavigationPrivate, parent ) {
+QDocumentNavigation::QDocumentNavigation( QObject *parent ) : QObject( parent ) {
+    impl = new QDocumentNavigationImpl( this );
 }
 
 
 QDocumentNavigation::~QDocumentNavigation() {
+    delete impl;
 }
 
 
 QDocument * QDocumentNavigation::document() const {
-    Q_D( const QDocumentNavigation );
-
-    return d->m_document;
+    return impl->m_document;
 }
 
 
 void QDocumentNavigation::setDocument( QDocument *document ) {
-    Q_D( QDocumentNavigation );
-
-    if ( d->m_document == document ) {
+    if ( impl->m_document == document ) {
         return;
     }
 
-    if ( d->m_document ) {
-        disconnect( d->m_documentStatusChangedConnection );
+    if ( impl->m_document ) {
+        disconnect( impl->m_documentStatusChangedConnection );
     }
 
-    d->m_document = document;
-    emit documentChanged( d->m_document );
+    impl->m_document = document;
+    emit documentChanged( impl->m_document );
 
-    if ( d->m_document ) {
-        d->m_documentStatusChangedConnection = connect(
-            d->m_document.data(), &QDocument::statusChanged, this, [ d ](){
-                d->documentStatusChanged();
+    if ( impl->m_document ) {
+        impl->m_documentStatusChangedConnection = connect(
+            impl->m_document.data(), &QDocument::statusChanged, [ this ](){
+                impl->documentStatusChanged();
             }
         );
     }
 
-    d->update();
+    impl->update();
 }
 
 
 int QDocumentNavigation::currentPage() const {
-    Q_D( const QDocumentNavigation );
-
-    return d->m_currentPage;
+    return impl->m_currentPage;
 }
 
 
 void QDocumentNavigation::setCurrentPage( int newPage ) {
-    Q_D( QDocumentNavigation );
-
-    if ( (newPage < 0) || (newPage >= d->m_pageCount) ) {
+    if ( (newPage < 0) || (newPage >= impl->m_pageCount) ) {
         return;
     }
 
-    if ( d->m_currentPage == newPage ) {
+    if ( impl->m_currentPage == newPage ) {
         return;
     }
 
-    d->m_currentPage = newPage;
-    emit currentPageChanged( d->m_currentPage );
+    impl->m_currentPage = newPage;
+    emit currentPageChanged( impl->m_currentPage );
 
-    d->updatePrevNext();
+    impl->updatePrevNext();
 }
 
 
 int QDocumentNavigation::pageCount() const {
-    Q_D( const QDocumentNavigation );
-    return d->m_pageCount;
+    return impl->m_pageCount;
 }
 
 
 bool QDocumentNavigation::canGoToPreviousPage() const {
-    Q_D( const QDocumentNavigation );
-    return d->m_canGoToPreviousPage;
+    return impl->m_canGoToPreviousPage;
 }
 
 
 bool QDocumentNavigation::canGoToNextPage() const {
-    Q_D( const QDocumentNavigation );
-    return d->m_canGoToNextPage;
+    return impl->m_canGoToNextPage;
 }
 
 
 void QDocumentNavigation::goToPreviousPage() {
-    Q_D( QDocumentNavigation );
-
-    if ( d->m_currentPage > 0 ) {
-        setCurrentPage( d->m_currentPage - 1 );
+    if ( impl->m_currentPage > 0 ) {
+        setCurrentPage( impl->m_currentPage - 1 );
     }
 }
 
 
 void QDocumentNavigation::goToNextPage() {
-    Q_D( QDocumentNavigation );
-
-    if ( d->m_currentPage < d->m_pageCount - 1 ) {
-        setCurrentPage( d->m_currentPage + 1 );
+    if ( impl->m_currentPage < impl->m_pageCount - 1 ) {
+        setCurrentPage( impl->m_currentPage + 1 );
     }
 }

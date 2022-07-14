@@ -1,36 +1,34 @@
 # QDocumentView
 
-A simple widget to display paged documents, like PDF, DjVu and so on..
+A simple widget to display paged documents, like PDF, DjVu and so on.. Currently, PDF and DjVu are natively supported.
 
 ## Features
-* Page-rotations: 0, 90, 180, 360
+* Page-rotations: 0, 90, 180, 270
 * Page Layout: Single, Facing, Book
 * Search highlight (if supported by the backend)
+* Custom zoom in the range 10% to 400%
+
 
 ### Notes for compiling (Qt5) - linux:
 
-* Download the sources
-  * Git: `git clone https://gitlab.com/marcusbritanicus/QDocumentView.git QDocumentView-master`
-* Enter `QDocumentView-master`, and create & enter the build directory.
-* Open the terminal and type: `cd QDocumentView-master && mkdir .build; cd .build`
-* Configure and compile the project: `cmake .. && make -kj$(nproc)`
-* To install, as root type: `make install`
+- Install all the dependencies
+- Download the sources
+  * Git: `git clone https://gitlab.com/marcusbritanicus/qdocumentview.git qdocumentview`
+- Enter the `qdocumentview` folder
+  * `cd qdocumentview`
+- Configure the project - we use meson for project management
+  * `meson .build --prefix=/usr --buildtype=release`
+- Compile and install - we use ninja
+  * `ninja -C .build -k 0 -j $(nproc) && sudo ninja -C .build install`
 
 ### Dependencies:
 #### Main library
 * Qt5 (qtbase5-dev)
 
 #### Backends
-* QtPdf (qtpdf-dev)
 * Poppler Qt5 (libpoppler-qt5-dev)
 * DjVULibre (libdjvulibre-dev)
 
-## My System Info
-* OS:				Debian Sid
-* Qt:				5.15.2
-* QtPdf:            5.15.6
-* Poppler:          20.09.0
-* DjVu Libre        3.5.28
-
 ### Upcoming
+* Plugins to support various document formats, like ps, cbr, cbz, etc
 * Any other feature you request for... :)
