@@ -43,6 +43,10 @@ QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
     m_documentMargins    = QMargins( 6, 6, 6, 6 );      // Page margins
     m_blockPageScrolling = false;                       // Flag to handle setting current page
     m_screenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
+    m_pageNavigation = new QDocumentNavigation( view );
+    m_pageRenderer   = new QDocumentRenderer( view );
+    m_searchThread   = new QDocumentSearch( view );
 }
 
 
@@ -53,19 +57,6 @@ QDocumentViewImpl::~QDocumentViewImpl() {
 
     m_searchThread->stop();
     delete m_searchThread;
-}
-
-
-void QDocumentViewImpl::init() {
-    m_pageNavigation = new QDocumentNavigation( publ );
-    m_pageRenderer   = new QDocumentRenderer( publ );
-    m_searchThread   = new QDocumentSearch( publ );
-}
-
-
-void QDocumentViewImpl::documentStatusChanged() {
-    updateDocumentLayout();
-    publ->viewport()->update();
 }
 
 
@@ -107,10 +98,6 @@ void QDocumentViewImpl::setViewport( QRect viewport ) {
 
     if ( oldSize != m_viewport.size() ) {
         updateDocumentLayout();
-
-        if ( m_zoomMode != QDocumentView::CustomZoom ) {
-            publ->viewport()->update();
-        }
     }
 
     if ( m_continuous ) {
@@ -151,7 +138,6 @@ void QDocumentViewImpl::updateScrollBars() {
 
 void QDocumentViewImpl::invalidateDocumentLayout() {
     updateDocumentLayout();
-    publ->viewport()->update();
 }
 
 
@@ -610,8 +596,6 @@ void QDocumentViewImpl::updateDocumentLayout() {
 
 
 qreal QDocumentViewImpl::zoomFactor() const {
-    int page = m_pageNavigation->currentPage();
-
     QSize pageSize;
 
     if ( m_zoomMode == QDocumentView::CustomZoom ) {
@@ -619,21 +603,37 @@ qreal QDocumentViewImpl::zoomFactor() const {
     }
 
     else if ( m_zoomMode == QDocumentView::FitToWidth ) {
-        pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
-        const qreal factor = (qreal( m_viewport.width() - m_documentMargins.left() - m_documentMargins.right() ) / qreal( pageSize.width() ) );
-        return factor;
+        return zoomFactorForFitWidth();
     }
 
     else if ( m_zoomMode == QDocumentView::FitInView ) {
-        const QSize viewportSize( m_viewport.size() + QSize( -m_documentMargins.left() - m_documentMargins.right(), -m_pageSpacing ) );
-
-        pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
-        pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio );
-
-        return pageSize.width() / m_document->pageSize( page ).width();
+        return zoomFactorForFitInView();
     }
 
     return 1.0;
+}
+
+
+qreal QDocumentViewImpl::zoomFactorForFitWidth() const {
+    int page = m_pageNavigation->currentPage();
+
+    QSize       pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
+    const qreal factor   = (qreal( m_viewport.width() - m_documentMargins.left() - m_documentMargins.right() ) / qreal( pageSize.width() ) );
+
+    return factor;
+}
+
+
+qreal QDocumentViewImpl::zoomFactorForFitInView() const {
+    int page = m_pageNavigation->currentPage();
+
+    const QSize viewportSize( m_viewport.size() + QSize( -m_documentMargins.left() - m_documentMargins.right(), -m_pageSpacing ) );
+
+    QSize pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
+
+    pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio );
+
+    return pageSize.width() / m_document->pageSize( page ).width();
 }
 
 

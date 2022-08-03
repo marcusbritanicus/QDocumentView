@@ -35,9 +35,6 @@ class QDocumentViewImpl {
         QDocumentViewImpl( QDocumentView *view );
         ~QDocumentViewImpl();
 
-        void init();
-
-        void documentStatusChanged();
         void currentPageChanged( int currentPage );
         void calculateViewport();
         void setViewport( QRect viewport );
@@ -48,6 +45,8 @@ class QDocumentViewImpl {
         qreal yPositionForPage( int page ) const;
 
         qreal zoomFactor() const;
+        qreal zoomFactorForFitWidth() const;
+        qreal zoomFactorForFitInView() const;
 
         struct DocumentLayout {
             QSize             documentSize;

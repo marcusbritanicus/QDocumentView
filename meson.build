@@ -16,16 +16,16 @@ add_global_arguments( '-DPROJECT_VERSION=' + meson.project_version(), language :
 add_project_link_arguments( ['-rdynamic','-fPIC'], language:'cpp' )
 
 if get_option('use_qt_version') == 'qt5'
-		Qt = import( 'qt5' )
-		QtBase    = dependency( 'qt5', modules: [ 'Core', 'Gui', 'Widgets' ] )
+	Qt = import( 'qt5' )
+	QtBase    = dependency( 'qt5', modules: [ 'Core', 'Gui', 'Widgets' ] )
     QtPrint   = dependency( 'qt5', modules: [ 'PrintSupport' ] )
     Poppler   = dependency( 'poppler-qt5' )
 
     libName   = 'Qt5DocumentView'
 
 elif get_option('use_qt_version') == 'qt6'
-		Qt = import( 'qt6' )
-		QtBase    = dependency( 'qt6', modules: [ 'Core', 'Gui', 'Widgets' ] )
+	Qt = import( 'qt6' )
+	QtBase    = dependency( 'qt6', modules: [ 'Core', 'Gui', 'Widgets' ] )
     QtPrint   = dependency( 'qt6', modules: [ 'PrintSupport' ] )
     Poppler   = dependency( 'poppler-qt6' )
 
@@ -67,23 +67,23 @@ Sources = [
 ]
 
 Mocs = Qt.compile_moc(
- 		headers : [ Headers, ImplHeaders ],
-	 	dependencies: Deps
+	headers : [ Headers, ImplHeaders ],
+	dependencies: Deps
 )
 Includes = [ 'includes', 'Document', 'View' ]
 
 qdocview = shared_library(
     libName, [ Sources, Mocs ],
-		version: meson.project_version(),
-		include_directories: [ Includes ],
+	version: meson.project_version(),
+	include_directories: [ Includes ],
     dependencies: Deps,
     install: true,
     install_dir: join_paths( get_option( 'libdir' ) )
 )
 
 install_subdir(
-		'includes/qdocumentview',
-		install_dir: get_option( 'includedir' )
+	'includes/qdocumentview',
+	install_dir: get_option( 'includedir' )
 )
 
 summary = [
@@ -98,9 +98,11 @@ message( '\n'.join( summary ) )
 ## PkgConfig Section
 pkgconfig = import( 'pkgconfig' )
 pkgconfig.generate(
-		qdocview,
-		name: libName,
-		version: meson.project_version(),
-		filebase: libName,
-		description: 'A Multi-page Document Rendering class for Qt',
+	qdocview,
+	name: libName,
+	subdirs: [ 'qdocumentview' ],
+	version: meson.project_version(),
+	filebase: libName,
+	description: 'A Multi-page Document Rendering class for Qt',
+	requires: [Poppler, DjVuLibre]
 )

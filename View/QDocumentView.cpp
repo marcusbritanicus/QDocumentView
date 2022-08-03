@@ -37,7 +37,6 @@
 
 QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) {
     impl = new QDocumentViewImpl( this );
-    impl->init();
 
     /** Piggy-back the matchesFound, and searchComplete signals from the search thread */
     connect( impl->m_searchThread, &QDocumentSearch::matchesFound,   this, &QDocumentView::matchesFound );
@@ -91,13 +90,13 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( false ) {
-                    //
+                if ( impl->m_zoomFactor * 1.10 > impl->zoomFactorForFitInView() ) {
+                    setZoomFactor( impl->zoomFactorForFitInView() );
                 }
 
                 /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( false ) {
-                    //
+                else if ( impl->m_zoomFactor * 1.10 > impl->zoomFactorForFitWidth() ) {
+                    setZoomFactor( impl->zoomFactorForFitWidth() );
                 }
 
                 else {
@@ -110,13 +109,13 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( false ) {
-                    //
+                if ( impl->m_zoomFactor / 1.10 > impl->zoomFactorForFitInView() ) {
+                    setZoomFactor( impl->zoomFactorForFitInView() );
                 }
 
                 /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( false ) {
-                    //
+                else if ( impl->m_zoomFactor / 1.10 > impl->zoomFactorForFitWidth() ) {
+                    setZoomFactor( impl->zoomFactorForFitWidth() );
                 }
 
                 else {
@@ -188,7 +187,7 @@ void QDocumentView::load( QString path ) {
     }
 
     else {
-        qDebug() << "Unknown document type:" << path;
+        qWarning() << "Unknown document type:" << path;
         return;
     }
 
@@ -263,10 +262,13 @@ void QDocumentView::setDocument( QDocument *document ) {
     if ( impl->m_document ) {
         impl->m_documentStatusChangedConnection = connect(
             impl->m_document, &QDocument::statusChanged, [ = ]( QDocument::Status sts ) {
-                impl->documentStatusChanged();
-
                 if ( sts == QDocument::Loading ) {
                     progress->show();
+                }
+
+                else if ( sts == QDocument::Ready ) {
+                    impl->updateDocumentLayout();
+                    viewport()->update();
                 }
 
                 else {
@@ -285,8 +287,6 @@ void QDocumentView::setDocument( QDocument *document ) {
     impl->m_pageNavigation->setDocument( impl->m_document );
     impl->m_pageRenderer->setDocument( impl->m_document );
 
-    impl->documentStatusChanged();
-
     mPagesBtn->setMaximumPages( document->pageCount() );
     mPagesBtn->setCurrentPage( impl->m_pageNavigation->currentPage() );
 
@@ -298,7 +298,10 @@ void QDocumentView::setDocument( QDocument *document ) {
         mPagesBtn->show();
     }
 
-    progress->hide();
+    if ( document->status() == QDocument::Ready ) {
+        impl->updateDocumentLayout();
+        viewport()->update();
+    }
 }
 
 
@@ -327,7 +330,7 @@ void QDocumentView::setLayoutContinuous( bool yes ) {
     }
 
     impl->m_continuous = yes;
-    impl->invalidateDocumentLayout();
+    impl->updateDocumentLayout();
 
     emit layoutContinuityChanged( yes );
 }
@@ -348,7 +351,7 @@ void QDocumentView::setPageLayout( PageLayout lyt ) {
     }
 
     impl->m_pageLayout = lyt;
-    impl->invalidateDocumentLayout();
+    impl->updateDocumentLayout();
 
     emit pageLayoutChanged( impl->m_pageLayout );
 }
@@ -369,7 +372,7 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
     }
 
     impl->m_zoomMode = mode;
-    impl->invalidateDocumentLayout();
+    impl->updateDocumentLayout();
 
     if ( impl->m_zoomMode == CustomZoom ) {
         mZoomBtn->show();
@@ -558,7 +561,6 @@ void QDocumentView::paintEvent( QPaintEvent *event ) {
 
 void QDocumentView::resizeEvent( QResizeEvent *event ) {
     QAbstractScrollArea::resizeEvent( event );
-    qApp->processEvents();
 
     if ( impl->m_document ) {
         if ( mZoomBtn and mZoomBtn->isVisible() ) {
@@ -571,18 +573,16 @@ void QDocumentView::resizeEvent( QResizeEvent *event ) {
 
         impl->updateScrollBars();
 
-        qApp->processEvents();
-
         if ( impl->pendingResize ) {
             return;
         }
 
         impl->pendingResize = true;
         QTimer::singleShot(
-            250, [ this ]() {
+            250, [ = ]() {
                 impl->calculateViewport();
-                impl->pendingResize = false;
                 viewport()->update();
+                impl->pendingResize = false;
             }
         );
     }
