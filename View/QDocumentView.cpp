@@ -431,6 +431,7 @@ void QDocumentView::setZoomFactor( qreal factor ) {
 
     impl->m_zoomFactor = factor;
     impl->invalidateDocumentLayout();
+    viewport()->update();
 
     emit zoomFactorChanged( impl->m_zoomFactor );
 }
