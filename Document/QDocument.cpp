@@ -114,6 +114,8 @@ QSizeF QDocument::pageSize( int pageNo ) const {
 
 
 void QDocument::reload() {
+    emit documentReloading();
+
     mStatus = Null;
     mPages.clear();
 
@@ -121,7 +123,7 @@ void QDocument::reload() {
 
     if ( mStatus == Ready ) {
         qDebug() << "Reload your pages..";
-        emit reloadDocument();
+        emit documentReloaded();
     }
 }
 

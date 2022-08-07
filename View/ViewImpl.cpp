@@ -44,6 +44,9 @@ QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
     m_blockPageScrolling = false;                       // Flag to handle setting current page
     m_screenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
 
+    m_documentState.currentPage     = 0;
+    m_documentState.currentPosition = QPointF( 0, 0 );
+
     m_pageNavigation = new QDocumentNavigation( view );
     m_pageRenderer   = new QDocumentRenderer( view );
     m_searchThread   = new QDocumentSearch( view );

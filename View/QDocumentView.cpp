@@ -277,9 +277,33 @@ void QDocumentView::setDocument( QDocument *document ) {
             }
         );
 
+        connect(
+            impl->m_document, &QDocument::documentReloading, this, [ this ]() mutable {
+                if ( impl->m_document->status() != QDocument::Ready ) {
+                    return;
+                }
+
+                impl->m_documentState.currentPage = impl->m_pageNavigation->currentPage();
+
+                qreal hFrac = 1.0 * horizontalScrollBar()->value() / horizontalScrollBar()->maximum();
+                qreal vFrac = 1.0 * verticalScrollBar()->value() / verticalScrollBar()->maximum();
+
+                impl->m_documentState.currentPosition = QPointF( hFrac, vFrac );
+            },
+            Qt::DirectConnection
+        );
+
         impl->m_reloadDocumentConnection = connect(
-            impl->m_document, &QDocument::reloadDocument, [ this ]() {
+            impl->m_document, &QDocument::documentReloaded, [ this ]() mutable {
                 impl->m_pageRenderer->reload();
+
+                impl->m_pageNavigation->setCurrentPage( impl->m_documentState.currentPage );
+                horizontalScrollBar()->setValue(
+                    impl->m_documentState.currentPosition.x() * horizontalScrollBar()->maximum()
+                );
+                verticalScrollBar()->setValue(
+                    impl->m_documentState.currentPosition.y() * verticalScrollBar()->maximum()
+                );
             }
         );
     }

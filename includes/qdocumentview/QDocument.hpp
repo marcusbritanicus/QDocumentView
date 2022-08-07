@@ -136,11 +136,13 @@ class QDocument : public QObject {
 
     Q_SIGNALS:
         void passwordRequired();
-        void reloadDocument();
         void statusChanged( QDocument::Status status );
         void pageCountChanged( int pageCount );
 
         void loading( int );
+
+        void documentReloading();
+        void documentReloaded();
 };
 
 class QDocumentPage {

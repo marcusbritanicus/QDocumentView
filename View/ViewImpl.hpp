@@ -28,7 +28,8 @@ class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocument;
 class QDocumentSearch;
-class QDocumentView
+class QDocumentView;
+
 class QDocumentViewImpl {
     public:
         QDocumentViewImpl( QDocumentView *view );
@@ -50,6 +51,24 @@ class QDocumentViewImpl {
         struct DocumentLayout {
             QSize             documentSize;
             QHash<int, QRect> pageGeometries;
+        };
+
+        struct DocumentState {
+            /**
+             * Current page.
+             * When a document reloads, we will try to
+             * come to this position. DocumentState should be
+             * cleared when setDocument(...) is called.
+             */
+            int     currentPage;
+
+            /**
+             * Current position of the document.
+             * This is the relative horizontal and vertical position
+             * of the document. When a document reloads, we will try
+             * to restore this position.
+             */
+            QPointF currentPosition;
         };
 
         DocumentLayout calculateDocumentLayout() const;
@@ -82,6 +101,7 @@ class QDocumentViewImpl {
         QRect m_viewport;
 
         DocumentLayout m_documentLayout;
+        DocumentState m_documentState;
 
         QDocumentSearch *m_searchThread;
         QHash<int, QVector<QRectF> > searchRects;

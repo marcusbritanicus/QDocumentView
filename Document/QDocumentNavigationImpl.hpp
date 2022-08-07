@@ -45,14 +45,19 @@ class QDocumentNavigationImpl : public QObject {
             }
 
             else {
-                if ( m_pageCount != 0 ) {
-                    m_pageCount = 0;
-                    emit publ->pageCountChanged( m_pageCount );
-                }
+                // if ( m_pageCount != 0 ) {
+                //     m_pageCount = 0;
+                //     emit publ->pageCountChanged( m_pageCount );
+                // }
             }
 
-            if ( m_currentPage != 0 ) {
-                m_currentPage = 0;
+            if ( m_currentPage < m_pageCount ) {
+                // m_currentPage = 0;
+                emit publ->currentPageChanged( m_currentPage );
+            }
+
+            else {
+                m_currentPage = m_pageCount - 1;
                 emit publ->currentPageChanged( m_currentPage );
             }
 
