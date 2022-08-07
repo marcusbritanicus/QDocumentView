@@ -28,8 +28,7 @@ class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocument;
 class QDocumentSearch;
-class QDocumentView;
-
+class QDocumentView
 class QDocumentViewImpl {
     public:
         QDocumentViewImpl( QDocumentView *view );

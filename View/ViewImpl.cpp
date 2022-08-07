@@ -129,10 +129,22 @@ void QDocumentViewImpl::updateScrollBars() {
     const QSize p = publ->viewport()->size();
     const QSize v = m_documentLayout.documentSize;
 
-    publ->horizontalScrollBar()->setRange( 0, v.width() - p.width() );
-    publ->horizontalScrollBar()->setPageStep( p.width() );
-    publ->verticalScrollBar()->setRange( 0, v.height() - p.height() );
-    publ->verticalScrollBar()->setPageStep( p.height() );
+    QScrollBar *vScroll = publ->verticalScrollBar();
+    QScrollBar *hScroll = publ->horizontalScrollBar();
+
+    qreal vPos = 1.0 * vScroll->value() / vScroll->maximum();
+    qreal hPos = 0.5;
+
+    int vMax = v.height() - p.height();
+    int hMax = v.width() - p.width();
+
+    vScroll->setRange( 0, vMax );
+    vScroll->setPageStep( p.height() );
+    vScroll->setValue( vPos * vMax );
+
+    hScroll->setRange( 0, hMax );
+    hScroll->setPageStep( p.width() );
+    hScroll->setValue( hPos * hMax );
 }
 
 
