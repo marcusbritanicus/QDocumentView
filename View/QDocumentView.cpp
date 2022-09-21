@@ -325,6 +325,7 @@ void QDocumentView::setDocument( QDocument *document ) {
     if ( document->status() == QDocument::Ready ) {
         impl->updateDocumentLayout();
         viewport()->update();
+        impl->m_searchThread->setDocument( document );
     }
 }
 
@@ -504,9 +505,13 @@ void QDocumentView::setDocumentMargins( QMargins margins ) {
 
 
 void QDocumentView::searchText( QString str ) {
+    /** Clear previous search */
     impl->searchRects.clear();
 
+    /** Set the current search string */
     impl->m_searchThread->setSearchString( str );
+
+    /** Begin the search on the current page */
     impl->m_searchThread->searchPage( impl->m_pageNavigation->currentPage() );
 }
 

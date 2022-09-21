@@ -83,6 +83,12 @@ void QDocumentSearch::setSearchString( QString str ) {
 
 
 void QDocumentSearch::searchPage( int pageNo ) {
+    /** If the document is not set */
+    if ( not mDoc ) {
+        qCritical() << "Please set the document with ::setDocument(...) before beginning search.";
+        return;
+    }
+
     /** Already queued */
     if ( pages.contains( pageNo ) ) {
         return;
