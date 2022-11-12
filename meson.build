@@ -17,19 +17,21 @@ add_project_link_arguments( ['-rdynamic','-fPIC'], language:'cpp' )
 
 if get_option('use_qt_version') == 'qt5'
 	Qt = import( 'qt5' )
-	QtBase  = dependency( 'qt5', modules: [ 'Core', 'Gui', 'Widgets' ] )
-    QtPrint = dependency( 'qt5', modules: [ 'PrintSupport' ] )
-    Poppler = dependency( 'poppler-qt5' )
+	QtBase     = dependency( 'qt5', modules: [ 'Core', 'Gui', 'Widgets' ] )
+    QtPrint    = dependency( 'qt5', modules: [ 'PrintSupport' ] )
+    Poppler    = dependency( 'poppler-qt5' )
 
-    libName = 'Qt5DocumentView'
+    libName    = 'Qt5DocumentView'
+    subdirname = 'qdocumentview/qt5'
 
 elif get_option('use_qt_version') == 'qt6'
 	Qt = import( 'qt6' )
-	QtBase  = dependency( 'qt6', modules: [ 'Core', 'Gui', 'Widgets' ] )
-    QtPrint = dependency( 'qt6', modules: [ 'PrintSupport' ] )
-    Poppler = dependency( 'poppler-qt6' )
+	QtBase     = dependency( 'qt6', modules: [ 'Core', 'Gui', 'Widgets' ] )
+    QtPrint    = dependency( 'qt6', modules: [ 'PrintSupport' ] )
+    Poppler    = dependency( 'poppler-qt6' )
 
-    libName = 'Qt6DocumentView'
+    libName    = 'Qt6DocumentView'
+    subdirname = 'qdocumentview/qt6'
 
 endif
 
@@ -81,10 +83,7 @@ qdocview = shared_library(
     install_dir: join_paths( get_option( 'libdir' ) )
 )
 
-install_subdir(
-	'includes/qdocumentview',
-	install_dir: get_option( 'includedir' )
-)
+install_headers( Headers, subdir: subdirname )
 
 summary = [
 	'',
@@ -100,7 +99,7 @@ pkgconfig = import( 'pkgconfig' )
 pkgconfig.generate(
 	qdocview,
 	name: libName,
-	subdirs: [ 'qdocumentview' ],
+	subdirs: subdirname,
 	version: meson.project_version(),
 	filebase: libName,
 	description: 'A Multi-page Document Rendering class for Qt',
