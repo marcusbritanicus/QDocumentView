@@ -33,8 +33,8 @@
 #include <QtGui>
 #include <QtWidgets>
 
-#include <qdocumentview/QDocument.hpp>
-#include <qdocumentview/QDocumentRenderOptions.hpp>
+#include <QDocument.hpp>
+#include <QDocumentRenderOptions.hpp>
 
 #include <libdjvu/ddjvuapi.h>
 

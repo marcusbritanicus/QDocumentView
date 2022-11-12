@@ -23,8 +23,8 @@
 
 #include <QtWidgets/qabstractscrollarea.h>
 
-#include <qdocumentview/QDocument.hpp>
-#include <qdocumentview/QDocumentRenderOptions.hpp>
+#include <QDocument.hpp>
+#include <QDocumentRenderOptions.hpp>
 
 class Zoom;
 class PageWidget;

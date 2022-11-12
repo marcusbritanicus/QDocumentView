@@ -25,7 +25,7 @@
 #include <QtGui>
 #include <QtWidgets>
 
-#include <qdocumentview/QDocumentRenderOptions.hpp>
+#include <QDocumentRenderOptions.hpp>
 
 class RenderTask;
 class QDocument;

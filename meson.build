@@ -72,7 +72,7 @@ Mocs = Qt.compile_moc(
 	headers : [ Headers, ImplHeaders ],
 	dependencies: Deps
 )
-Includes = [ 'includes', 'Document', 'View' ]
+Includes = [ 'includes', 'includes/qdocumentview', 'Document', 'View' ]
 
 qdocview = shared_library(
     libName, [ Sources, Mocs ],

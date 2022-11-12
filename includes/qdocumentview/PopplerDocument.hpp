@@ -33,8 +33,8 @@
 #include <QtGui>
 #include <QtWidgets>
 
-#include <qdocumentview/QDocument.hpp>
-#include <qdocumentview/QDocumentRenderOptions.hpp>
+#include <QDocument.hpp>
+#include <QDocumentRenderOptions.hpp>
 
 #if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
 #include <poppler/qt5/poppler-qt5.h>

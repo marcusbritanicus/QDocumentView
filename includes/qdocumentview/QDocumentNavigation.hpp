@@ -22,7 +22,7 @@
 #pragma once
 
 #include <QObject>
-#include <qdocumentview/QDocument.hpp>
+#include <QDocument.hpp>
 
 class QDocument;
 class QDocumentNavigation;
