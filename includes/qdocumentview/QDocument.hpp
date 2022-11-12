@@ -41,7 +41,7 @@ class QDocument : public QObject {
             Unloading,
             Failed
         };
-        Q_ENUM( QDocument::Status )
+        Q_ENUM( QDocument::Status );
 
         enum Error {
             NoError,
@@ -49,7 +49,7 @@ class QDocument : public QObject {
             FileNotFoundError,
             IncorrectPasswordError
         };
-        Q_ENUM( QDocument::Error )
+        Q_ENUM( QDocument::Error );
 
         enum MetaDataField {
             Title,
@@ -64,6 +64,7 @@ class QDocument : public QObject {
         Q_ENUM( MetaDataField );
 
         QDocument( QString docPath );
+        virtual ~QDocument() = default;
 
         /* Check if a password is needed */
         virtual bool passwordNeeded() const;
@@ -148,7 +149,7 @@ class QDocument : public QObject {
 class QDocumentPage {
     public:
         QDocumentPage( int );
-        virtual ~QDocumentPage();
+        virtual ~QDocumentPage() = default;
 
         virtual void setPageData( void *data ) = 0;
 

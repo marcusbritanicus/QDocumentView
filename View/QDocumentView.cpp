@@ -158,7 +158,7 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
     /* 100% Zoom */
     QShortcut *shortcut = new QShortcut( this );
 
-    shortcut->setKey( QKeySequence( Qt::CTRL + Qt::Key_0 ) );
+    shortcut->setKey( QKeySequence( Qt::CTRL | Qt::Key_0 ) );
     connect(
         shortcut, &QShortcut::activated, [ = ]() {
             setZoomFactor( 1.0 );

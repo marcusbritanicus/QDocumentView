@@ -22,13 +22,14 @@
 #pragma once
 
 #include <QtWidgets/qabstractscrollarea.h>
+
+#include <qdocumentview/QDocument.hpp>
 #include <qdocumentview/QDocumentRenderOptions.hpp>
 
 class Zoom;
 class PageWidget;
 class QProgressBar;
 
-class QDocument;
 class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocumentView;
@@ -54,7 +55,7 @@ class QDocumentView : public QAbstractScrollArea {
             BookView,
             OverView
         };
-        Q_ENUM( PageLayout )
+        Q_ENUM( PageLayout );
 
         enum ZoomMode {
             CustomZoom,

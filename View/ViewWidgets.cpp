@@ -56,7 +56,11 @@ void Zoom::setEnlargeEnabled( bool yes ) {
 }
 
 
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
 void Zoom::enterEvent( QEvent *event ) {
+#else
+void Zoom::enterEvent( QEnterEvent *event ) {
+#endif
     btnState.mouseIn = true;
 
     repaint();
@@ -74,12 +78,18 @@ void Zoom::leaveEvent( QEvent *event ) {
 
 void Zoom::mousePressEvent( QMouseEvent *mEvent ) {
     if ( mEvent->button() == Qt::LeftButton ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        QPointF mPos = mEvent->localPos();
+#else
+        QPointF mPos = mEvent->position();
+#endif
+
         // Left half = dwindle button pressed
-        if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+        if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
             btnState = { true, isDwindleEnabled, false, isDwindleEnabled, false };
         }
 
-        else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+        else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
             btnState = { true, false, isEnlargeEnabled, false, isEnlargeEnabled };
         }
 
@@ -101,11 +111,17 @@ void Zoom::mouseMoveEvent( QMouseEvent *mEvent ) {
         return;
     }
 
-    if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+    QPointF mPos = mEvent->localPos();
+#else
+    QPointF mPos = mEvent->position();
+#endif
+
+    if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
         btnState = { true, isDwindleEnabled, false, false, false };
     }
 
-    else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+    else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
         btnState = { true, false, isEnlargeEnabled, false, false };
     }
 
@@ -120,14 +136,20 @@ void Zoom::mouseMoveEvent( QMouseEvent *mEvent ) {
 
 void Zoom::mouseReleaseEvent( QMouseEvent *mEvent ) {
     if ( mEvent->button() == Qt::LeftButton ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        QPointF mPos = mEvent->localPos();
+#else
+        QPointF mPos = mEvent->position();
+#endif
+
         // dwindle-button was pressed and release
-        if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+        if ( dwindleRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
             if ( btnState.dwindlePressed and isDwindleEnabled ) {
                 emit clicked( "dwindle" );
             }
         }
 
-        else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mEvent->localPos() ) ) {
+        else if ( enlargeRect.adjusted( -2, -2, 2, 2 ).contains( mPos ) ) {
             if ( btnState.enlargePressed and isEnlargeEnabled ) {
                 emit clicked( "enlarge" );
             }
@@ -269,7 +291,11 @@ void PageWidget::setMaximumPages( int pages ) {
 }
 
 
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
 void PageWidget::enterEvent( QEvent *event ) {
+#else
+void PageWidget::enterEvent( QEnterEvent *event ) {
+#endif
     btnState.mouseIn = true;
 
     repaint();
@@ -287,16 +313,22 @@ void PageWidget::leaveEvent( QEvent *event ) {
 
 void PageWidget::mousePressEvent( QMouseEvent *mEvent ) {
     if ( mEvent->button() == Qt::LeftButton ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        QPointF mPos = mEvent->localPos();
+#else
+        QPointF mPos = mEvent->position();
+#endif
+
         // Left half = previous button pressed
-        if ( previousRect.contains( mEvent->localPos() ) ) {
+        if ( previousRect.contains( mPos ) ) {
             btnState = { true, isPreviousEnabled, false, false, isPreviousEnabled, false, false };
         }
 
-        else if ( nextRect.contains( mEvent->localPos() ) ) {
+        else if ( nextRect.contains( mPos ) ) {
             btnState = { true, false, isNextEnabled, false, false, isNextEnabled, false };
         }
 
-        else if ( textRect.contains( mEvent->localPos() ) ) {
+        else if ( textRect.contains( mPos ) ) {
             btnState = { true, false, false, true, false, false, true };
         }
 
@@ -318,15 +350,21 @@ void PageWidget::mouseMoveEvent( QMouseEvent *mEvent ) {
         return;
     }
 
-    if ( previousRect.contains( mEvent->localPos() ) ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+    QPointF mPos = mEvent->localPos();
+#else
+    QPointF mPos = mEvent->position();
+#endif
+
+    if ( previousRect.contains( mPos ) ) {
         btnState = { true, isPreviousEnabled, false, false, false, false, false };
     }
 
-    else if ( nextRect.contains( mEvent->localPos() ) ) {
+    else if ( nextRect.contains( mPos ) ) {
         btnState = { true, false, isNextEnabled, false, false, false, false };
     }
 
-    else if ( textRect.contains( mEvent->localPos() ) ) {
+    else if ( textRect.contains( mPos ) ) {
         btnState = { true, false, false, true, false, false, true };
     }
 
@@ -341,8 +379,14 @@ void PageWidget::mouseMoveEvent( QMouseEvent *mEvent ) {
 
 void PageWidget::mouseReleaseEvent( QMouseEvent *mEvent ) {
     if ( mEvent->button() == Qt::LeftButton ) {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        QPointF mPos = mEvent->localPos();
+#else
+        QPointF mPos = mEvent->position();
+#endif
+
         // previous-button was pressed and release
-        if ( previousRect.contains( mEvent->localPos() ) ) {
+        if ( previousRect.contains( mPos ) ) {
             if ( btnState.previousPressed and isPreviousEnabled ) {
                 curPage--;
 
@@ -355,7 +399,7 @@ void PageWidget::mouseReleaseEvent( QMouseEvent *mEvent ) {
             }
         }
 
-        else if ( nextRect.contains( mEvent->localPos() ) ) {
+        else if ( nextRect.contains( mPos ) ) {
             if ( btnState.nextPressed and isNextEnabled ) {
                 curPage++;
 
@@ -368,7 +412,7 @@ void PageWidget::mouseReleaseEvent( QMouseEvent *mEvent ) {
             }
         }
 
-        else if ( textRect.contains( mEvent->localPos() ) ) {
+        else if ( textRect.contains( mPos ) ) {
             QInputDialog *inDlg = new QInputDialog( this );
             inDlg->setWindowTitle( "DesQDocs | Goto Page" );
             inDlg->setLabelText( "Enter the page to which you want to jump:" );

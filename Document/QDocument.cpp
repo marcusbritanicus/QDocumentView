@@ -22,45 +22,7 @@
 #include <libgen.h>
 #include <qdocumentview/QDocument.hpp>
 
-/*
- * Helper functions
- */
-QString dirName( QString path ) {
-    if ( path == "/" or path == "//" ) {
-        return "/";
-    }
-
-    /* Simple clean path: remove '//' and './' */
-    path = path.replace( "//", "/" ).replace( "/./", "/" );
-
-    char    *dupPath = strdup( path.toLocal8Bit().constData() );
-    QString dirPth   = QString::fromLocal8Bit( dirname( dupPath ) );
-
-    dirPth += (dirPth.endsWith( "/" ) ? "" : "/");
-    free( dupPath );
-
-    return dirPth;
-}
-
-
-QString baseName( QString path ) {
-    if ( path == "/" or path == "//" ) {
-        return "/";
-    }
-
-    /* Simple clean path" remove '//' and './' */
-    path = path.replace( "//", "/" ).replace( "/./", "/" );
-
-    char    *dupPath = strdup( path.toLocal8Bit().constData() );
-    QString basePth  = QString::fromLocal8Bit( basename( dupPath ) );
-
-    free( dupPath );
-
-    return basePth;
-}
-
-
-/*
+/**
  * Generic class to handle document
  */
 
@@ -89,12 +51,12 @@ QDocument::QDocument( QString path ) : QObject() {
 
 
 QString QDocument::fileName() const {
-    return baseName( mDocPath );
+    return QFileInfo( mDocPath ).baseName();
 }
 
 
 QString QDocument::filePath() const {
-    return dirName( mDocPath );
+    return QFileInfo( mDocPath ).path();
 }
 
 
@@ -233,16 +195,12 @@ void QDocument::setZoom( qreal zoom ) {
 }
 
 
-/*
+/**
  * Generic class to handle a document page
  */
 
 QDocumentPage::QDocumentPage( int pgNo ) {
     mPageNo = pgNo;
-}
-
-
-QDocumentPage::~QDocumentPage() {
 }
 
 

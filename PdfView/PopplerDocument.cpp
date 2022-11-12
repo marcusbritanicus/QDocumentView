@@ -58,8 +58,13 @@ void PopplerDocument::setPassword( QString password ) {
     mPdfDoc->setRenderHint( Poppler::Document::TextHinting );
 
     for ( int i = 0; i < mPdfDoc->numPages(); i++ ) {
-        Poppler::Page *p    = mPdfDoc->page( i );
-        PdfPage       *page = new PdfPage( i );
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        Poppler::Page *p = mPdfDoc->page( i );
+#else
+        Poppler::Page *p = mPdfDoc->page( i ).get();
+#endif
+
+        PdfPage *page = new PdfPage( i );
         page->setPageData( p );
         mPages.append( page );
 
@@ -112,7 +117,11 @@ void PopplerDocument::load() {
         return;
     }
 
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
     mPdfDoc = Poppler::Document::load( mDocPath );
+#else
+    mPdfDoc = Poppler::Document::load( mDocPath ).get();
+#endif
 
     if ( not mPdfDoc ) {
         mStatus = Failed;
@@ -138,8 +147,13 @@ void PopplerDocument::load() {
     mPdfDoc->setRenderHint( Poppler::Document::TextHinting );
 
     for ( int i = 0; i < mPdfDoc->numPages(); i++ ) {
-        Poppler::Page *p    = mPdfDoc->page( i );
-        PdfPage       *page = new PdfPage( i );
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+        Poppler::Page *p = mPdfDoc->page( i );
+#else
+        Poppler::Page *p = mPdfDoc->page( i ).get();
+#endif
+
+        PdfPage *page = new PdfPage( i );
         page->setPageData( p );
         mPages.append( page );
 
