@@ -32,3 +32,6 @@ A simple widget to display paged documents, like PDF, DjVu and so on.. Currently
 ### Upcoming
 * Plugins to support various document formats, like ps, cbr, cbz, etc
 * Any other feature you request for... :)
+
+### Known Bugs
+* Deleting QDocumentView pointer can potentially cause a SIGSEGV.

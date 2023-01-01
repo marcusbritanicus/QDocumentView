@@ -123,7 +123,7 @@ void PopplerDocument::load() {
     mPdfDoc = Poppler::Document::load( mDocPath ).get();
 #endif
 
-    if ( not mPdfDoc ) {
+    if ( not mPdfDoc or not mPdfDoc->numPages() ) {
         mStatus = Failed;
         mError  = UnknownError;
         qDebug() << "Poppler::Document load failed";
