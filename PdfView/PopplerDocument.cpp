@@ -61,7 +61,7 @@ void PopplerDocument::setPassword( QString password ) {
 #if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
         Poppler::Page *p = mPdfDoc->page( i );
 #else
-        Poppler::Page *p = mPdfDoc->page( i ).get();
+        Poppler::Page *p = mPdfDoc->page( i ).release();
 #endif
 
         PdfPage *page = new PdfPage( i );
@@ -118,9 +118,9 @@ void PopplerDocument::load() {
     }
 
 #if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
-    mPdfDoc = Poppler::Document::load( mDocPath );
+    mPdfDoc = std::unique_ptr<Poppler::Document>( Poppler::Document::load( mDocPath ) );
 #else
-    mPdfDoc = Poppler::Document::load( mDocPath ).get();
+    mPdfDoc = Poppler::Document::load( mDocPath );
 #endif
 
     if ( not mPdfDoc or not mPdfDoc->numPages() ) {
@@ -150,7 +150,7 @@ void PopplerDocument::load() {
 #if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
         Poppler::Page *p = mPdfDoc->page( i );
 #else
-        Poppler::Page *p = mPdfDoc->page( i ).get();
+        Poppler::Page *p = mPdfDoc->page( i ).release();
 #endif
 
         PdfPage *page = new PdfPage( i );
@@ -176,7 +176,7 @@ void PopplerDocument::close() {
     mPages.clear();
     mZoom = 1.0;
 
-    delete mPdfDoc;
+    mPdfDoc.reset();
 }
 
 
@@ -186,12 +186,12 @@ PdfPage::PdfPage( int pgNo ) : QDocumentPage( pgNo ) {
 
 
 PdfPage::~PdfPage() {
-    delete m_page;
+    m_page.reset();
 }
 
 
 void PdfPage::setPageData( void *data ) {
-    m_page = static_cast<Poppler::Page *>(data);
+    m_page = std::unique_ptr<Poppler::Page>( (Poppler::Page *)data );
 }
 
 

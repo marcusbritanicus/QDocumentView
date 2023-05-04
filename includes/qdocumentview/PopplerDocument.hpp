@@ -66,7 +66,7 @@ class PopplerDocument : public QDocument {
 
     private:
         /* Pointer to our actual poppler document */
-        Poppler::Document *mPdfDoc;
+        std::unique_ptr<Poppler::Document> mPdfDoc;
 };
 
 class PdfPage : public QDocumentPage {
@@ -97,5 +97,5 @@ class PdfPage : public QDocumentPage {
         QList<QRectF> search( QString query, QDocumentRenderOptions ) const;
 
     private:
-        Poppler::Page *m_page;
+        std::unique_ptr<Poppler::Page> m_page;
 };
