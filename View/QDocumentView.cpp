@@ -516,6 +516,15 @@ void QDocumentView::searchText( QString str ) {
 }
 
 
+void QDocumentView::clearSearch() {
+    /** Clear previous search */
+    impl->searchRects.clear();
+
+    /** Update the viewport */
+    viewport()->update();
+}
+
+
 bool QDocumentView::showPagesOSD() const {
     return mShowPages;
 }

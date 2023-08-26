@@ -87,6 +87,7 @@ class QDocumentView : public QAbstractScrollArea {
         void setDocumentMargins( QMargins margins );
 
         void searchText( QString str );
+        void clearSearch();
 
         bool showPagesOSD() const;
         void setShowPagesOSD( bool );
