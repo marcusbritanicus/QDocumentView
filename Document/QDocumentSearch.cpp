@@ -31,6 +31,7 @@ QDocumentSearch::QDocumentSearch( QObject *parent )
     connect(
         this, &QDocumentSearch::pendingRestart, [ this ]() {
             stop_others = false;
+            mStartPage  = pages[ 0 ];
             start();
         }
     );
@@ -68,10 +69,13 @@ void QDocumentSearch::setDocument( QDocument *doc ) {
 
 void QDocumentSearch::setSearchString( QString str ) {
     if ( needle == str.toLower() ) {
+        emit searchComplete( matchCount );
         return;
     }
 
     mStop = true;
+
+    mStartPage = -1;
 
     matchCount = 0;
     emit matchesFound( matchCount );
@@ -104,8 +108,12 @@ void QDocumentSearch::searchPage( int pageNo ) {
         return;
     }
 
+    if ( mStartPage == -1 ) {
+        mStartPage = pageNo;
+    }
+
     /** Add to the list */
-    pages << pageNo;
+    pages.push( pageNo );
 
     mStop = false;
 
@@ -138,22 +146,29 @@ void QDocumentSearch::run() {
             return;
         }
 
-        int curPage = pages.takeFirst();
+        int curPage = pages.pop();
 
         QList<QRectF> _results = mDoc->search( needle, curPage, QDocumentRenderOptions() );
-        matchCount += _results.count();
+        matchCount += _results.length();
 
-        emit matchesFound( matchCount );
+        /** Emit signal only if new search results were obtained */
+        if ( _results.length() ) {
+            emit matchesFound( matchCount );
+        }
+
         mResults[ curPage ] = QVector<QRectF>::fromList( _results );
 
         /** If we've stopped, then we don't want any signals being emitted */
         if ( not mStop ) {
-            emit resultsReady( curPage );
+            /** Emit signal only if new search results were obtained */
+            if ( _results.length() ) {
+                emit resultsReady( curPage, mResults[ curPage ] );
+            }
         }
     }
 
-    /** Search all pages from beginning */
-    for (int pg = 0; pg < mDoc->pageCount(); pg++) {
+    /** Search all the subsequent pages */
+    for ( int pg = mStartPage + 1; pg < mDoc->pageCount(); pg++ ) {
         if ( mStop ) {
             return;
         }
@@ -171,12 +186,56 @@ void QDocumentSearch::run() {
         QList<QRectF> _results = mDoc->search( needle, pg, QDocumentRenderOptions() );
 
         matchCount += _results.count();
-        emit matchesFound( matchCount );
+
+        /** Emit signal only if new search results were obtained */
+        if ( _results.length() ) {
+            emit matchesFound( matchCount );
+        }
+
         mResults[ pg ] = QVector<QRectF>::fromList( _results );
 
         /** If we've stopped, then we don't want any signals being emitted */
         if ( not mStop ) {
-            emit resultsReady( pg );
+            /** Emit signal only if new search results were obtained */
+            if ( _results.length() ) {
+                emit resultsReady( pg, mResults[ pg ] );
+            }
+        }
+    }
+
+    /** Search all the pages from the beginning till the starting page */
+    for ( int pg = 0; pg < mStartPage; pg++ ) {
+        if ( mStop ) {
+            return;
+        }
+
+        if ( stop_others ) {
+            emit pendingRestart();
+            return;
+        }
+
+        /** Already finished with @pg */
+        if ( mResults.contains( pg ) ) {
+            continue;
+        }
+
+        QList<QRectF> _results = mDoc->search( needle, pg, QDocumentRenderOptions() );
+
+        matchCount += _results.count();
+
+        /** Emit signal only if new search results were obtained */
+        if ( _results.length() ) {
+            emit matchesFound( matchCount );
+        }
+
+        mResults[ pg ] = QVector<QRectF>::fromList( _results );
+
+        /** If we've stopped, then we don't want any signals being emitted */
+        if ( not mStop ) {
+            /** Emit signal only if new search results were obtained */
+            if ( _results.length() ) {
+                emit resultsReady( pg, mResults[ pg ] );
+            }
         }
     }
 
@@ -184,4 +243,6 @@ void QDocumentSearch::run() {
     if ( mResults.keys().count() == mDoc->pageCount() ) {
         emit searchComplete( matchCount );
     }
+
+    mStartPage = -1;
 }

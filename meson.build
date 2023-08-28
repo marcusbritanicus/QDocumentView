@@ -12,7 +12,7 @@ project(
 	],
 )
 
-add_global_arguments( '-DPROJECT_VERSION=' + meson.project_version(), language : 'cpp' )
+add_project_arguments( '-DPROJECT_VERSION=' + meson.project_version(), language : 'cpp' )
 add_project_link_arguments( ['-rdynamic','-fPIC'], language:'cpp' )
 
 if get_option('use_qt_version') == 'qt5'
@@ -35,8 +35,10 @@ elif get_option('use_qt_version') == 'qt6'
 
 endif
 
-DjVuLibre = dependency( 'ddjvuapi' )
-Deps = [ QtBase, QtPrint, Poppler, DjVuLibre ]
+DjVuLibre = dependency( 'ddjvuapi', required: false )
+
+Deps     = [ QtBase, QtPrint, Poppler ]
+Requires = [ Poppler, ]
 
 Headers = [
     'includes/qdocumentview/QDocument.hpp',
@@ -45,7 +47,6 @@ Headers = [
     'includes/qdocumentview/QDocumentRenderOptions.hpp',
     'includes/qdocumentview/QDocumentSearch.hpp',
     'includes/qdocumentview/QDocumentView.hpp',
-    'includes/qdocumentview/DjVuDocument.hpp',
     'includes/qdocumentview/PopplerDocument.hpp',
 ]
 
@@ -61,12 +62,18 @@ Sources = [
     'Document/QDocumentNavigation.cpp',
     'Document/QDocumentRenderer.cpp',
     'Document/QDocumentSearch.cpp',
-    'DjView/DjVuDocument.cpp',
     'PdfView/PopplerDocument.cpp',
     'View/QDocumentView.cpp',
     'View/ViewImpl.cpp',
     'View/ViewWidgets.cpp',
 ]
+
+if DjVuLibre.found()
+	Deps     += [ DjVuLibre, ]
+	Requires += [ DjVuLibre, ]
+	Headers  += [ 'includes/qdocumentview/DjVuDocument.hpp', ]
+	Sources  += [ 'DjView/DjVuDocument.cpp', ]
+endif
 
 Mocs = Qt.compile_moc(
 	headers : [ Headers, ImplHeaders ],
@@ -103,5 +110,5 @@ pkgconfig.generate(
 	version: meson.project_version(),
 	filebase: libName,
 	description: 'A Multi-page Document Rendering class for Qt',
-	requires: [Poppler, DjVuLibre]
+	requires: Requires,
 )

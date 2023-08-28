@@ -39,33 +39,48 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
     impl = new QDocumentViewImpl( this );
 
     /** Piggy-back the matchesFound, and searchComplete signals from the search thread */
-    connect( impl->m_searchThread, &QDocumentSearch::matchesFound,   this, &QDocumentView::matchesFound );
-    connect( impl->m_searchThread, &QDocumentSearch::searchComplete, this, &QDocumentView::searchComplete );
+    connect( impl->mSearchThread, &QDocumentSearch::matchesFound,   this, &QDocumentView::matchesFound );
+    connect( impl->mSearchThread, &QDocumentSearch::searchComplete, this, &QDocumentView::searchComplete );
 
     connect(
-        impl->m_searchThread, &QDocumentSearch::resultsReady, [ this ]( int page ) {
-            impl->searchRects[ page ] = impl->m_searchThread->results( page );
-            viewport()->update();
-        }
-    );
+        impl->mSearchThread, &QDocumentSearch::resultsReady, [ this ]( int page, QVector<QRectF> results ) {
+            /** Store the search results */
+            impl->searchRects[ page ] = results;
 
-    connect(
-        impl->m_searchThread, &QDocumentSearch::resultsReady, [ this ]( int page ) {
-            impl->searchRects[ page ] = impl->m_searchThread->results( page );
+            /** Highlight the first search rect from the current point */
+            impl->highlightFirstSearchInstance( page, results );
+
+            /** Now, we're ready for page repaints */
             viewport()->update();
         }
     );
 
     /* Setup Page Navigation */
     connect(
-        impl->m_pageNavigation, &QDocumentNavigation::currentPageChanged, this, [ this ]( int page ){
+        impl->mPageNavigation, &QDocumentNavigation::currentPageChanged, this, [ this ]( int page ) {
             impl->currentPageChanged( page );
+
+            /**
+             * Reset the search upon scroll if it's running: Prioritize current page.
+             * This will result in highlighting the first instance in the current page.
+             */
+            if ( impl->mSearchThread->isRunning() ) {
+                impl->mSearchThread->searchPage( page );
+            }
+
+            /**
+             * If search is already finished, highlight the search in the current page
+             * If there is no search, do nothing.
+             */
+            else {
+                impl->highlightSearchInstanceInCurrentPage();
+            }
         }
     );
 
     /* Setup Page Renderer */
     connect(
-        impl->m_pageRenderer, &QDocumentRenderer::pageRendered, [ = ]( int ) {
+        impl->mPageRenderer, &QDocumentRenderer::pageRendered, [ = ]( int ) {
             viewport()->update();
         }
     );
@@ -73,10 +88,10 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
     /* Zoom buttons */
     mZoomBtn = new Zoom( this );
 
-    if ( impl->m_zoomMode == CustomZoom ) {
+    if ( impl->mZoomMode == CustomZoom ) {
         mZoomBtn->show();
-        mZoomBtn->setEnlargeEnabled( impl->m_zoomFactor < 4.0 ? true : false );
-        mZoomBtn->setDwindleEnabled( impl->m_zoomFactor > 0.1 ? true : false );
+        mZoomBtn->setEnlargeEnabled( impl->mZoomFactor < 4.0 ? true : false );
+        mZoomBtn->setDwindleEnabled( impl->mZoomFactor > 0.1 ? true : false );
     }
 
     else {
@@ -90,17 +105,17 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( impl->m_zoomFactor * 1.10 > impl->zoomFactorForFitInView() ) {
+                if ( impl->mZoomFactor * 1.10 > impl->zoomFactorForFitInView() ) {
                     setZoomFactor( impl->zoomFactorForFitInView() );
                 }
 
                 /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( impl->m_zoomFactor * 1.10 > impl->zoomFactorForFitWidth() ) {
+                else if ( impl->mZoomFactor * 1.10 > impl->zoomFactorForFitWidth() ) {
                     setZoomFactor( impl->zoomFactorForFitWidth() );
                 }
 
                 else {
-                    setZoomFactor( impl->m_zoomFactor * 1.10 );
+                    setZoomFactor( impl->mZoomFactor * 1.10 );
                 }
             }
 
@@ -109,29 +124,29 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( impl->m_zoomFactor / 1.10 > impl->zoomFactorForFitInView() ) {
+                if ( impl->mZoomFactor / 1.10 > impl->zoomFactorForFitInView() ) {
                     setZoomFactor( impl->zoomFactorForFitInView() );
                 }
 
                 /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( impl->m_zoomFactor / 1.10 > impl->zoomFactorForFitWidth() ) {
+                else if ( impl->mZoomFactor / 1.10 > impl->zoomFactorForFitWidth() ) {
                     setZoomFactor( impl->zoomFactorForFitWidth() );
                 }
 
                 else {
-                    setZoomFactor( impl->m_zoomFactor / 1.10 );
+                    setZoomFactor( impl->mZoomFactor / 1.10 );
                 }
             }
 
-            mZoomBtn->setEnlargeEnabled( impl->m_zoomFactor < 4.0 ? true : false );
-            mZoomBtn->setDwindleEnabled( impl->m_zoomFactor > 0.1 ? true : false );
+            mZoomBtn->setEnlargeEnabled( impl->mZoomFactor < 4.0 ? true : false );
+            mZoomBtn->setDwindleEnabled( impl->mZoomFactor > 0.1 ? true : false );
         }
     );
 
     /* Page buttons */
     mPagesBtn = new PageWidget( this );
-    connect( impl->m_pageNavigation, &QDocumentNavigation::currentPageChanged, mPagesBtn,              &PageWidget::setCurrentPage );
-    connect( mPagesBtn,              &PageWidget::loadPage,                    impl->m_pageNavigation, &QDocumentNavigation::setCurrentPage );
+    connect( impl->mPageNavigation, &QDocumentNavigation::currentPageChanged, mPagesBtn,             &PageWidget::setCurrentPage );
+    connect( mPagesBtn,             &PageWidget::loadPage,                    impl->mPageNavigation, &QDocumentNavigation::setCurrentPage );
 
     /* ProgressBar */
     progress = new QProgressBar( this );
@@ -247,21 +262,21 @@ void QDocumentView::load( QString path ) {
 
 
 void QDocumentView::setDocument( QDocument *document ) {
-    if ( impl->m_document == document ) {
+    if ( impl->mDocument == document ) {
         return;
     }
 
-    if ( impl->m_document ) {
-        disconnect( impl->m_documentStatusChangedConnection );
-        disconnect( impl->m_reloadDocumentConnection );
+    if ( impl->mDocument ) {
+        disconnect( impl->mDocumentStatusChangedConnection );
+        disconnect( impl->mReloadDocumentConnection );
     }
 
-    impl->m_document = document;
-    emit documentChanged( impl->m_document );
+    impl->mDocument = document;
+    emit documentChanged( impl->mDocument );
 
-    if ( impl->m_document ) {
-        impl->m_documentStatusChangedConnection = connect(
-            impl->m_document, &QDocument::statusChanged, [ = ]( QDocument::Status sts ) {
+    if ( impl->mDocument ) {
+        impl->mDocumentStatusChangedConnection = connect(
+            impl->mDocument, &QDocument::statusChanged, [ = ]( QDocument::Status sts ) {
                 if ( sts == QDocument::Loading ) {
                     progress->show();
                 }
@@ -278,41 +293,37 @@ void QDocumentView::setDocument( QDocument *document ) {
         );
 
         connect(
-            impl->m_document, &QDocument::documentReloading, this, [ this ]() mutable {
-                if ( impl->m_document->status() != QDocument::Ready ) {
+            impl->mDocument, &QDocument::documentReloading, this, [ this ]() mutable {
+                if ( impl->mDocument->status() != QDocument::Ready ) {
                     return;
                 }
 
-                impl->m_documentState.currentPage = impl->m_pageNavigation->currentPage();
+                impl->mDocState.currentPage = impl->mPageNavigation->currentPage();
 
                 qreal hFrac = 1.0 * horizontalScrollBar()->value() / horizontalScrollBar()->maximum();
                 qreal vFrac = 1.0 * verticalScrollBar()->value() / verticalScrollBar()->maximum();
 
-                impl->m_documentState.currentPosition = QPointF( hFrac, vFrac );
+                impl->mDocState.currentPosition = QPointF( hFrac, vFrac );
             },
             Qt::DirectConnection
         );
 
-        impl->m_reloadDocumentConnection = connect(
-            impl->m_document, &QDocument::documentReloaded, [ this ]() mutable {
-                impl->m_pageRenderer->reload();
+        impl->mReloadDocumentConnection = connect(
+            impl->mDocument, &QDocument::documentReloaded, [ this ]() mutable {
+                impl->mPageRenderer->reload();
 
-                impl->m_pageNavigation->setCurrentPage( impl->m_documentState.currentPage );
-                horizontalScrollBar()->setValue(
-                    impl->m_documentState.currentPosition.x() * horizontalScrollBar()->maximum()
-                );
-                verticalScrollBar()->setValue(
-                    impl->m_documentState.currentPosition.y() * verticalScrollBar()->maximum()
-                );
+                impl->mPageNavigation->setCurrentPage( impl->mDocState.currentPage );
+                horizontalScrollBar()->setValue( impl->mDocState.currentPosition.x() * horizontalScrollBar()->maximum() );
+                verticalScrollBar()->setValue( impl->mDocState.currentPosition.y() * verticalScrollBar()->maximum() );
             }
         );
     }
 
-    impl->m_pageNavigation->setDocument( impl->m_document );
-    impl->m_pageRenderer->setDocument( impl->m_document );
+    impl->mPageNavigation->setDocument( impl->mDocument );
+    impl->mPageRenderer->setDocument( impl->mDocument );
 
     mPagesBtn->setMaximumPages( document->pageCount() );
-    mPagesBtn->setCurrentPage( impl->m_pageNavigation->currentPage() );
+    mPagesBtn->setCurrentPage( impl->mPageNavigation->currentPage() );
 
     if ( mShowZoom ) {
         mZoomBtn->show();
@@ -325,36 +336,36 @@ void QDocumentView::setDocument( QDocument *document ) {
     if ( document->status() == QDocument::Ready ) {
         impl->updateDocumentLayout();
         viewport()->update();
-        impl->m_searchThread->setDocument( document );
+        impl->mSearchThread->setDocument( document );
     }
 }
 
 
 QDocument *QDocumentView::document() const {
-    return impl->m_document;
+    return impl->mDocument;
 }
 
 
 QDocumentNavigation *QDocumentView::pageNavigation() const {
-    return impl->m_pageNavigation;
+    return impl->mPageNavigation;
 }
 
 
 bool QDocumentView::isLayoutContinuous() const {
-    return impl->m_continuous;
+    return impl->mContinuous;
 }
 
 
 void QDocumentView::setLayoutContinuous( bool yes ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_continuous == yes ) {
+    if ( impl->mContinuous == yes ) {
         return;
     }
 
-    impl->m_continuous = yes;
+    impl->mContinuous = yes;
     impl->updateDocumentLayout();
 
     emit layoutContinuityChanged( yes );
@@ -362,44 +373,44 @@ void QDocumentView::setLayoutContinuous( bool yes ) {
 
 
 QDocumentView::PageLayout QDocumentView::pageLayout() const {
-    return impl->m_pageLayout;
+    return impl->mPageLayout;
 }
 
 
 void QDocumentView::setPageLayout( PageLayout lyt ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_pageLayout == lyt ) {
+    if ( impl->mPageLayout == lyt ) {
         return;
     }
 
-    impl->m_pageLayout = lyt;
+    impl->mPageLayout = lyt;
     impl->updateDocumentLayout();
 
-    emit pageLayoutChanged( impl->m_pageLayout );
+    emit pageLayoutChanged( impl->mPageLayout );
 }
 
 
 QDocumentView::ZoomMode QDocumentView::zoomMode() const {
-    return impl->m_zoomMode;
+    return impl->mZoomMode;
 }
 
 
 void QDocumentView::setZoomMode( ZoomMode mode ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_zoomMode == mode ) {
+    if ( impl->mZoomMode == mode ) {
         return;
     }
 
-    impl->m_zoomMode = mode;
+    impl->mZoomMode = mode;
     impl->updateDocumentLayout();
 
-    if ( impl->m_zoomMode == CustomZoom ) {
+    if ( impl->mZoomMode == CustomZoom ) {
         mZoomBtn->show();
     }
 
@@ -407,7 +418,7 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
         mZoomBtn->hide();
     }
 
-    emit zoomModeChanged( impl->m_zoomMode );
+    emit zoomModeChanged( impl->mZoomMode );
 }
 
 
@@ -417,32 +428,32 @@ qreal QDocumentView::zoomFactor() const {
 
 
 void QDocumentView::setRenderOptions( QDocumentRenderOptions opts ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_renderOpts == opts ) {
+    if ( impl->mRenderOpts == opts ) {
         return;
     }
 
-    impl->m_renderOpts = opts;
+    impl->mRenderOpts = opts;
     impl->invalidateDocumentLayout();
 
-    emit renderOptionsChanged( impl->m_renderOpts );
+    emit renderOptionsChanged( impl->mRenderOpts );
 }
 
 
 QDocumentRenderOptions QDocumentView::renderOptions() const {
-    return impl->m_renderOpts;
+    return impl->mRenderOpts;
 }
 
 
 void QDocumentView::setZoomFactor( qreal factor ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_zoomFactor == factor ) {
+    if ( impl->mZoomFactor == factor ) {
         return;
     }
 
@@ -454,53 +465,68 @@ void QDocumentView::setZoomFactor( qreal factor ) {
         factor = 0.1;
     }
 
-    impl->m_zoomFactor = factor;
+    impl->mZoomFactor = factor;
     impl->invalidateDocumentLayout();
     viewport()->update();
 
-    emit zoomFactorChanged( impl->m_zoomFactor );
+    emit zoomFactorChanged( impl->mZoomFactor );
+}
+
+
+QColor QDocumentView::pageColor() {
+    return impl->mPageColor;
+}
+
+
+void QDocumentView::setPageColor( QColor clr ) {
+    if ( impl->mPageColor == clr ) {
+        return;
+    }
+
+    impl->mPageColor = clr;
+    viewport()->update();
 }
 
 
 int QDocumentView::pageSpacing() const {
-    return impl->m_pageSpacing;
+    return impl->mPageSpacing;
 }
 
 
 void QDocumentView::setPageSpacing( int spacing ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_pageSpacing == spacing ) {
+    if ( impl->mPageSpacing == spacing ) {
         return;
     }
 
-    impl->m_pageSpacing = spacing;
+    impl->mPageSpacing = spacing;
     impl->invalidateDocumentLayout();
 
-    emit pageSpacingChanged( impl->m_pageSpacing );
+    emit pageSpacingChanged( impl->mPageSpacing );
 }
 
 
 QMargins QDocumentView::documentMargins() const {
-    return impl->m_documentMargins;
+    return impl->mDocumentMargins;
 }
 
 
 void QDocumentView::setDocumentMargins( QMargins margins ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
-    if ( impl->m_documentMargins == margins ) {
+    if ( impl->mDocumentMargins == margins ) {
         return;
     }
 
-    impl->m_documentMargins = margins;
+    impl->mDocumentMargins = margins;
     impl->invalidateDocumentLayout();
 
-    emit documentMarginsChanged( impl->m_documentMargins );
+    emit documentMarginsChanged( impl->mDocumentMargins );
 }
 
 
@@ -509,10 +535,14 @@ void QDocumentView::searchText( QString str ) {
     impl->searchRects.clear();
 
     /** Set the current search string */
-    impl->m_searchThread->setSearchString( str );
+    impl->mSearchThread->setSearchString( str );
+
+    /** Clear the current search page and rect */
+    impl->searchPage    = -1;
+    impl->curSearchRect = QRectF();
 
     /** Begin the search on the current page */
-    impl->m_searchThread->searchPage( impl->m_pageNavigation->currentPage() );
+    impl->mSearchThread->searchPage( impl->mPageNavigation->currentPage() );
 }
 
 
@@ -520,7 +550,26 @@ void QDocumentView::clearSearch() {
     /** Clear previous search */
     impl->searchRects.clear();
 
+    /** Clear current search instance rect */
+    impl->curSearchRect = QRectF();
+
     /** Update the viewport */
+    viewport()->update();
+}
+
+
+void QDocumentView::highlightNextSearchInstance() {
+    impl->highlightNextSearchInstance();
+
+    /** The Next search rect has been highlighted. Now redraw. */
+    viewport()->update();
+}
+
+
+void QDocumentView::highlightPreviousSearchInstance() {
+    impl->highlightPreviousSearchInstance();
+
+    /** The Previous search rect has been highlighted. Now redraw. */
     viewport()->update();
 }
 
@@ -533,7 +582,7 @@ bool QDocumentView::showPagesOSD() const {
 void QDocumentView::setShowPagesOSD( bool yes ) {
     mShowPages = yes;
 
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
@@ -555,7 +604,7 @@ bool QDocumentView::showZoomOSD() const {
 void QDocumentView::setShowZoomOSD( bool yes ) {
     mShowZoom = yes;
 
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         return;
     }
 
@@ -570,7 +619,7 @@ void QDocumentView::setShowZoomOSD( bool yes ) {
 
 
 void QDocumentView::paintEvent( QPaintEvent *event ) {
-    if ( not impl->m_document ) {
+    if ( not impl->mDocument ) {
         QAbstractScrollArea::paintEvent( event );
         return;
     }
@@ -578,19 +627,23 @@ void QDocumentView::paintEvent( QPaintEvent *event ) {
     QPainter painter( viewport() );
 
     painter.fillRect( event->rect(), palette().brush( QPalette::Dark ) );
-    painter.translate( -impl->m_viewport.x(), -impl->m_viewport.y() );
+    painter.translate( -impl->mViewPort.x(), -impl->mViewPort.y() );
 
-    for ( auto it = impl->m_documentLayout.pageGeometries.cbegin(); it != impl->m_documentLayout.pageGeometries.cend(); ++it ) {
+    for ( auto it = impl->mDocumentLayout.pageGeometries.cbegin(); it != impl->mDocumentLayout.pageGeometries.cend(); ++it ) {
         const QRect pageGeometry = it.value();
 
-        if ( pageGeometry.intersects( impl->m_viewport ) ) {
-            painter.fillRect( pageGeometry, Qt::white );
+        if ( pageGeometry.intersects( impl->mViewPort ) ) {
+            if ( it.key() == impl->mDocState.currentPage ) {
+                painter.fillRect( QRectF( pageGeometry ).adjusted( -2, -2, 2, 2 ), qApp->palette().color( QPalette::Highlight ) );
+            }
+
+            painter.fillRect( pageGeometry, impl->mPageColor );
 
             const int page = it.key();
-            QImage    img  = impl->m_pageRenderer->requestPage( page, pageGeometry.size(), impl->m_renderOpts );
+            QImage    img  = impl->mPageRenderer->requestPage( page, pageGeometry.size(), impl->mRenderOpts );
 
             if ( img.width() and img.height() ) {
-                impl->paintSearchRects( page, img );
+                impl->paintOverlayRects( page, img );
                 painter.drawImage( pageGeometry.topLeft(), img );
             }
         }
@@ -601,7 +654,7 @@ void QDocumentView::paintEvent( QPaintEvent *event ) {
 void QDocumentView::resizeEvent( QResizeEvent *event ) {
     QAbstractScrollArea::resizeEvent( event );
 
-    if ( impl->m_document ) {
+    if ( impl->mDocument ) {
         if ( mZoomBtn and mZoomBtn->isVisible() ) {
             mZoomBtn->move( 5, viewport()->height() - mZoomBtn->height() - 5 );
         }
@@ -639,13 +692,13 @@ void QDocumentView::keyPressEvent( QKeyEvent *kEvent ) {
     switch ( kEvent->key() ) {
         case Qt::Key_Right: {
             /* Go to next page */
-            impl->m_pageNavigation->setCurrentPage( impl->m_pageNavigation->currentPage() + 1 );
+            impl->mPageNavigation->setCurrentPage( impl->mPageNavigation->currentPage() + 1 );
             break;
         }
 
         case Qt::Key_Left: {
             /* Go to previous page */
-            impl->m_pageNavigation->setCurrentPage( impl->m_pageNavigation->currentPage() - 1 );
+            impl->mPageNavigation->setCurrentPage( impl->mPageNavigation->currentPage() - 1 );
             break;
         }
 
@@ -669,13 +722,13 @@ void QDocumentView::keyPressEvent( QKeyEvent *kEvent ) {
 
         case Qt::Key_Plus: {
             /* Zoom In */
-            setZoomFactor( impl->m_zoomFactor * 1.10 );
+            setZoomFactor( impl->mZoomFactor * 1.10 );
             break;
         }
 
         case Qt::Key_Minus: {
             /* Zoom Out */
-            setZoomFactor( impl->m_zoomFactor / 1.10 );
+            setZoomFactor( impl->mZoomFactor / 1.10 );
             break;
         }
 
@@ -695,11 +748,11 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
         int steps = numDegrees.y() / 15;
 
         if ( steps > 0 ) {
-            setZoomFactor( impl->m_zoomFactor * 1.10 );
+            setZoomFactor( impl->mZoomFactor * 1.10 );
         }
 
         else {
-            setZoomFactor( impl->m_zoomFactor / 1.10 );
+            setZoomFactor( impl->mZoomFactor / 1.10 );
         }
 
         return;

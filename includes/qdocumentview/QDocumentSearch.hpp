@@ -51,7 +51,9 @@ class QDocumentSearch : public QThread {
         QDocument *mDoc;
         QString needle;
 
-        QVector<int> pages;
+        QStack<int> pages;
+
+        int mStartPage = -1;
 
         QHash<int, QVector<QRectF> > mResults;
 
@@ -70,7 +72,7 @@ class QDocumentSearch : public QThread {
 
     Q_SIGNALS:
         /** Results of @pageNo are ready */
-        void resultsReady( int pageNo );
+        void resultsReady( int pageNo, QVector<QRectF> );
 
         void matchesFound( int );
         void searchComplete( int numMatches );

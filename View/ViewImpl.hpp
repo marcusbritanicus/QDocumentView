@@ -78,39 +78,71 @@ class QDocumentViewImpl {
         DocumentLayout calculateDocumentLayoutOverview() const;
         void updateDocumentLayout();
 
-        void paintSearchRects( int, QImage& );
+        void highlightFirstSearchInstance( int page, QVector<QRectF> rects );
+        void highlightNextSearchInstance();
+        void highlightPreviousSearchInstance();
 
-        QDocument *m_document = nullptr;
-        QDocumentNavigation *m_pageNavigation = nullptr;
-        QDocumentRenderer *m_pageRenderer     = nullptr;
+        /**
+         * The user may have scrolled to this page.
+         * If there is a search rect in this page, then highlight it.
+         * IMP: Do not scroll. Attempt to highlight the rect in viewport.
+         * If nothing is visible in the viewport, highlight the first rect.
+         */
+        void highlightSearchInstanceInCurrentPage();
 
-        bool m_continuous;
-        QDocumentView::PageLayout m_pageLayout;
-        QDocumentView::ZoomMode m_zoomMode;
-        qreal m_zoomFactor;
-        QDocumentRenderOptions m_renderOpts;
+        void paintOverlayRects( int, QImage& );
 
-        int m_pageSpacing;
-        QMargins m_documentMargins;
+        /**
+         * We can have two cases:
+         * 1. Search rects, where the given rect is in original page scale and rotation. Case inverse =
+         * false.
+         * 2. Rubberband selection, where the rect is view page scale and rotation. Case inverse = true.
+         * In both the cases, the top-left of the page is taken to be (0, 0)
+         */
+        QRectF getTransformedRect( QRectF, int page, bool inverse );
 
-        bool m_blockPageScrolling;
+        /**
+         * Scroll to make the given point/region of a page visible in the viewport.
+         */
+        void makePointVisible( QPointF, QRectF );
+        void makeRegionVisible( QRectF, QRectF );
 
-        QMetaObject::Connection m_documentStatusChangedConnection;
-        QMetaObject::Connection m_reloadDocumentConnection;
+        QDocument *mDocument = nullptr;
+        QDocumentNavigation *mPageNavigation = nullptr;
+        QDocumentRenderer *mPageRenderer     = nullptr;
 
-        QRect m_viewport;
+        QColor mPageColor;
 
-        DocumentLayout m_documentLayout;
-        DocumentState m_documentState;
+        bool mContinuous;
+        QDocumentView::PageLayout mPageLayout;
+        QDocumentView::ZoomMode mZoomMode;
+        qreal mZoomFactor;
+        QDocumentRenderOptions mRenderOpts;
 
-        QDocumentSearch *m_searchThread;
+        int mPageSpacing;
+        QMargins mDocumentMargins;
+
+        bool mBlockPageScrolling;
+
+        QMetaObject::Connection mDocumentStatusChangedConnection;
+        QMetaObject::Connection mReloadDocumentConnection;
+
+        QRect mViewPort;
+
+        DocumentLayout mDocumentLayout;
+        DocumentState mDocState;
+
+        QDocumentSearch *mSearchThread;
         QHash<int, QVector<QRectF> > searchRects;
+        int searchPage;
+        QRectF curSearchRect;
 
         QDocumentView *publ;
 
-        qreal m_screenResolution; // pixels per point
+        qreal mScreenResolution; // pixels per point
         bool pendingResize = false;
 };
 
 
 Q_DECLARE_TYPEINFO( QDocumentViewImpl::DocumentLayout, Q_MOVABLE_TYPE );
+Q_DECLARE_TYPEINFO( QDocumentViewImpl::DocumentState,  Q_MOVABLE_TYPE );

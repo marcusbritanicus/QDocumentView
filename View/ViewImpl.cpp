@@ -34,50 +34,53 @@
 
 
 QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
-    publ                 = view;                        // Pointer to the public class
-    m_continuous         = true;                        // Continuous layout
-    m_pageLayout         = QDocumentView::SinglePage;   // Draw only one page (single column)
-    m_zoomMode           = QDocumentView::CustomZoom;   // Start with a custom zoom of 1.0
-    m_zoomFactor         = 1.0;                         // Zoom factor for custom zoom
-    m_pageSpacing        = 3;                           // Default space between two pages
-    m_documentMargins    = QMargins( 6, 6, 6, 6 );      // Page margins
-    m_blockPageScrolling = false;                       // Flag to handle setting current page
-    m_screenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+    publ       = view;                                 // Pointer to the public class
+    mPageColor = QColor( 0xff, 0xff, 0xff );           // Page color (works only for transparent pdfs, i.e.,
+                                                       // non-scan)
+    mContinuous         = true;                        // Continuous layout
+    mPageLayout         = QDocumentView::SinglePage;   // Draw only one page (single column)
+    mZoomMode           = QDocumentView::CustomZoom;   // Start with a custom zoom of 1.0
+    mZoomFactor         = 1.0;                         // Zoom factor for custom zoom
+    mPageSpacing        = 5;                           // Default space between two pages
+    mDocumentMargins    = QMargins( 6, 6, 6, 6 );      // Page margins
+    mBlockPageScrolling = false;                       // Flag to handle setting current page
+    mScreenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
 
-    m_documentState.currentPage     = 0;
-    m_documentState.currentPosition = QPointF( 0, 0 );
+    mDocState.currentPage     = 0;
+    mDocState.currentPosition = QPointF( 0, 0 );
 
-    m_pageNavigation = new QDocumentNavigation( view );
-    m_pageRenderer   = new QDocumentRenderer( view );
-    m_searchThread   = new QDocumentSearch( view );
+    mPageNavigation = new QDocumentNavigation( view );
+    mPageRenderer   = new QDocumentRenderer( view );
+    mSearchThread   = new QDocumentSearch( view );
 }
 
 
 QDocumentViewImpl::~QDocumentViewImpl() {
-    delete m_document;
-    delete m_pageNavigation;
-    delete m_pageRenderer;
+    delete mDocument;
+    delete mPageNavigation;
+    delete mPageRenderer;
 
-    m_searchThread->stop();
-    delete m_searchThread;
+    mSearchThread->stop();
+    delete mSearchThread;
 }
 
 
 void QDocumentViewImpl::currentPageChanged( int currentPage ) {
-    if ( m_blockPageScrolling ) {
+    if ( mBlockPageScrolling ) {
         return;
     }
 
+    mDocState.currentPage = mPageNavigation->currentPage();
     publ->verticalScrollBar()->setValue( yPositionForPage( currentPage ) );
 
-    if ( m_pageLayout == QDocumentView::SinglePage ) {
+    if ( mPageLayout == QDocumentView::SinglePage ) {
         invalidateDocumentLayout();
     }
 }
 
 
 void QDocumentViewImpl::calculateViewport() {
-    if ( not m_document ) {
+    if ( not mDocument ) {
         return;
     }
 
@@ -91,26 +94,26 @@ void QDocumentViewImpl::calculateViewport() {
 
 
 void QDocumentViewImpl::setViewport( QRect viewport ) {
-    if ( m_viewport == viewport ) {
+    if ( mViewPort == viewport ) {
         return;
     }
 
-    const QSize oldSize = m_viewport.size();
+    const QSize oldSize = mViewPort.size();
 
-    m_viewport = viewport;
+    mViewPort = viewport;
 
-    if ( oldSize != m_viewport.size() ) {
+    if ( oldSize != mViewPort.size() ) {
         updateDocumentLayout();
     }
 
-    if ( m_continuous ) {
+    if ( mContinuous ) {
         // An imaginary, 2px height line at the upper half of the viewport, which is used to
         // determine which page is currently located there -> we propagate that as 'current' page
         // to the QDocumentNavigation object
-        const QRect currentPageLine( m_viewport.x(), m_viewport.y() + m_viewport.height() * 0.4, m_viewport.width(), 2 );
+        const QRect currentPageLine( mViewPort.x(), mViewPort.y() + mViewPort.height() * 0.4, mViewPort.width(), 2 );
 
         int currentPage = 0;
-        for ( auto it = m_documentLayout.pageGeometries.cbegin(); it != m_documentLayout.pageGeometries.cend(); ++it ) {
+        for ( auto it = mDocumentLayout.pageGeometries.cbegin(); it != mDocumentLayout.pageGeometries.cend(); ++it ) {
             const QRect pageGeometry = it.value();
 
             if ( pageGeometry.intersects( currentPageLine ) ) {
@@ -119,10 +122,11 @@ void QDocumentViewImpl::setViewport( QRect viewport ) {
             }
         }
 
-        if ( currentPage != m_pageNavigation->currentPage() ) {
-            m_blockPageScrolling = true;
-            m_pageNavigation->setCurrentPage( currentPage );
-            m_blockPageScrolling = false;
+        if ( currentPage != mPageNavigation->currentPage() ) {
+            mBlockPageScrolling   = true;
+            mDocState.currentPage = currentPage;
+            mPageNavigation->setCurrentPage( currentPage );
+            mBlockPageScrolling = false;
         }
     }
 }
@@ -130,7 +134,7 @@ void QDocumentViewImpl::setViewport( QRect viewport ) {
 
 void QDocumentViewImpl::updateScrollBars() {
     const QSize p = publ->viewport()->size();
-    const QSize v = m_documentLayout.documentSize;
+    const QSize v = mDocumentLayout.documentSize;
 
     QScrollBar *vScroll = publ->verticalScrollBar();
     QScrollBar *hScroll = publ->horizontalScrollBar();
@@ -157,7 +161,7 @@ void QDocumentViewImpl::invalidateDocumentLayout() {
 
 
 QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayout() const {
-    switch ( m_pageLayout ) {
+    switch ( mPageLayout ) {
         /** One column */
         case QDocumentView::SinglePage: {
             return calculateDocumentLayoutSingle();
@@ -186,27 +190,27 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayout() c
 QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSingle() const {
     DocumentLayout documentLayout;
 
-    if ( !m_document || (m_document->status() != QDocument::Ready) ) {
+    if ( !mDocument || (mDocument->status() != QDocument::Ready) ) {
         return documentLayout;
     }
 
     QHash<int, QRect> pageGeometries;
 
-    const int pageCount = m_document->pageCount() - 1;
+    const int pageCount = mDocument->pageCount() - 1;
 
     int totalWidth = 0;
 
-    const int startPage = (m_continuous ? 0         : m_pageNavigation->currentPage() );
-    const int endPage   = (m_continuous ? pageCount : m_pageNavigation->currentPage() );
+    const int startPage = (mContinuous ? 0         : mPageNavigation->currentPage() );
+    const int endPage   = (mContinuous ? pageCount : mPageNavigation->currentPage() );
 
-    const int horizMargins = m_documentMargins.left() + m_documentMargins.right();
-    int       pageY        = m_documentMargins.top();
+    const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
+    int       pageY        = mDocumentMargins.top();
 
     // calculate page sizes
     for (int page = startPage; page <= endPage; ++page) {
-        QSizeF pageSize = m_document->pageSize( page ) * m_screenResolution;
+        QSizeF pageSize = mDocument->pageSize( page ) * mScreenResolution;
 
-        switch ( m_renderOpts.rotation() ) {
+        switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
             case QDocumentRenderOptions::Rotate90:
             case QDocumentRenderOptions::Rotate270: {
@@ -219,20 +223,20 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSing
             }
         }
 
-        if ( m_zoomMode == QDocumentView::CustomZoom ) {
-            pageSize *= m_zoomFactor;
+        if ( mZoomMode == QDocumentView::CustomZoom ) {
+            pageSize *= mZoomFactor;
         }
 
-        else if ( m_zoomMode == QDocumentView::FitToWidth ) {
-            const qreal factor = (qreal( m_viewport.width() - horizMargins ) / qreal( pageSize.width() ) );
+        else if ( mZoomMode == QDocumentView::FitToWidth ) {
+            const qreal factor = (qreal( mViewPort.width() - horizMargins ) / qreal( pageSize.width() ) );
             pageSize *= factor;
         }
 
-        else if ( m_zoomMode == QDocumentView::FitInView ) {
-            const int   margins = (m_continuous ? 0 : m_documentMargins.bottom() + m_documentMargins.top() - m_pageSpacing);
-            const QSize viewportSize( m_viewport.size() - QSize( horizMargins, m_pageSpacing + margins ) );
+        else if ( mZoomMode == QDocumentView::FitInView ) {
+            const int   margins = (mContinuous ? 0 : mDocumentMargins.bottom() + mDocumentMargins.top() - mPageSpacing);
+            const QSize viewportSize( mViewPort.size() - QSize( horizMargins, mPageSpacing + margins ) );
 
-            pageSize += QSizeF( 0, m_pageSpacing );
+            pageSize += QSizeF( 0, mPageSpacing );
             pageSize  = pageSize.scaled( viewportSize, Qt::KeepAspectRatio );
         }
 
@@ -245,15 +249,15 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSing
         const QSize pageSize = pageGeometries[ page ].size();
 
         // center horizontal inside the viewport
-        const int pageX = (qMax( totalWidth, m_viewport.width() ) - pageSize.width() ) / 2;
+        const int pageX = (qMax( totalWidth, mViewPort.width() ) - pageSize.width() ) / 2;
 
         pageGeometries[ page ].moveTopLeft( QPoint( pageX, pageY ) );
 
-        pageY += pageSize.height() + m_pageSpacing;
+        pageY += pageSize.height() + mPageSpacing;
     }
 
-    /** We added an amount 'm_pageSpacing' amount extra */
-    pageY += m_documentMargins.bottom() - m_pageSpacing;
+    /** We added an amount 'mPageSpacing' amount extra */
+    pageY += mDocumentMargins.bottom() - mPageSpacing;
 
     documentLayout.pageGeometries = pageGeometries;
 
@@ -267,21 +271,21 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSing
 QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFacing() const {
     DocumentLayout documentLayout;
 
-    if ( !m_document || (m_document->status() != QDocument::Ready) ) {
+    if ( !mDocument || (mDocument->status() != QDocument::Ready) ) {
         return documentLayout;
     }
 
     QHash<int, QRect> pageGeometries;
 
-    const int pageCount = m_document->pageCount() - 1;
-    const int curPage   = m_pageNavigation->currentPage();
+    const int pageCount = mDocument->pageCount() - 1;
+    const int curPage   = mPageNavigation->currentPage();
 
     int totalWidth = 0;
 
     int startPage = 0;
     int endPage   = pageCount;
 
-    if ( not m_continuous ) {
+    if ( not mContinuous ) {
         if ( curPage % 2 == 0 ) {
             startPage = curPage;
             endPage   = curPage;
@@ -293,16 +297,16 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
         }
     }
 
-    const int horizMargins = m_documentMargins.left() + m_documentMargins.right();
+    const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
 
     // calculate page sizes
     for (int page = startPage; page <= endPage; page += 2) {
         QSizeF pageSize;
 
-        QSizeF p1 = m_document->pageSize( page ) * m_screenResolution;
-        QSizeF p2 = m_document->pageSize( page + 1 ) * m_screenResolution;
+        QSizeF p1 = mDocument->pageSize( page ) * mScreenResolution;
+        QSizeF p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
 
-        switch ( m_renderOpts.rotation() ) {
+        switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
             case QDocumentRenderOptions::Rotate90:
             case QDocumentRenderOptions::Rotate270: {
@@ -319,29 +323,29 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
         /** Page size is sum of individual pages, suitable pre-rotated */
         pageSize = QSizeF( p1.width() + p2.width(), qMax( p1.height(), p2.height() ) );
 
-        if ( m_zoomMode == QDocumentView::CustomZoom ) {
-            pageSize *= m_zoomFactor;
-            p1       *= m_zoomFactor;
-            p2       *= m_zoomFactor;
-            pageSize += QSizeF( m_pageSpacing, 0 );
+        if ( mZoomMode == QDocumentView::CustomZoom ) {
+            pageSize *= mZoomFactor;
+            p1       *= mZoomFactor;
+            p2       *= mZoomFactor;
+            pageSize += QSizeF( mPageSpacing, 0 );
         }
 
-        else if ( m_zoomMode == QDocumentView::FitToWidth ) {
-            const qreal factor = qreal( m_viewport.width() - horizMargins - m_pageSpacing ) / qreal( pageSize.width() );
+        else if ( mZoomMode == QDocumentView::FitToWidth ) {
+            const qreal factor = qreal( mViewPort.width() - horizMargins - mPageSpacing ) / qreal( pageSize.width() );
             pageSize *= factor;
             p1       *= (factor / (p2.isValid() ? 1.0 : 2.0) );
             p2       *= factor;
 
             if ( p2.isValid() ) {
-                pageSize += QSizeF( m_pageSpacing, 0 );
+                pageSize += QSizeF( mPageSpacing, 0 );
             }
         }
 
-        else if ( m_zoomMode == QDocumentView::FitInView ) {
-            const int   margins = (m_continuous ? 0 : m_documentMargins.bottom() + m_documentMargins.top() - m_pageSpacing);
-            const QSize viewportSize( m_viewport.size() - QSize( horizMargins, m_pageSpacing + margins ) );
+        else if ( mZoomMode == QDocumentView::FitInView ) {
+            const int   margins = (mContinuous ? 0 : mDocumentMargins.bottom() + mDocumentMargins.top() - mPageSpacing);
+            const QSize viewportSize( mViewPort.size() - QSize( horizMargins, mPageSpacing + margins ) );
 
-            pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio ) + QSizeF( m_pageSpacing, 0 );
+            pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio ) + QSizeF( mPageSpacing, 0 );
 
             if ( not p2.isValid() ) {
                 p1 = QSizeF( pageSize.width(), pageSize.height() );
@@ -350,7 +354,7 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
             else {
                 p1        = QSizeF( pageSize.width() / 2.0, pageSize.height() );
                 p2        = QSizeF( pageSize.width() / 2.0, pageSize.height() );
-                pageSize += QSizeF( m_pageSpacing, 0 );
+                pageSize += QSizeF( mPageSpacing, 0 );
             }
         }
 
@@ -363,7 +367,7 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
         }
     }
 
-    int pageY = m_documentMargins.top();
+    int pageY = mDocumentMargins.top();
 
     // calculate page positions
     for (int page = startPage; page <= endPage; page += 2) {
@@ -373,17 +377,17 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
         const int pageHeight = qMax( size1.height(), size2.height() );
 
         /** center horizontal inside the viewport */
-        const int pageX = (qMax( totalWidth, m_viewport.width() ) - size1.width() - (size2.isNull() ? 0 : size2.width() + m_pageSpacing) ) / 2;
+        const int pageX = (qMax( totalWidth, mViewPort.width() ) - size1.width() - (size2.isNull() ? 0 : size2.width() + mPageSpacing) ) / 2;
         pageGeometries[ page ].moveTopLeft( QPoint( pageX, pageY ) );
 
         if ( size2.isValid() ) {
-            pageGeometries[ page + 1 ].moveTopLeft( QPoint( pageX + size1.width() + m_pageSpacing, pageY ) );
+            pageGeometries[ page + 1 ].moveTopLeft( QPoint( pageX + size1.width() + mPageSpacing, pageY ) );
         }
 
-        pageY += pageHeight + m_pageSpacing;
+        pageY += pageHeight + mPageSpacing;
     }
 
-    pageY += m_documentMargins.bottom() - m_pageSpacing;
+    pageY += mDocumentMargins.bottom() - mPageSpacing;
 
     documentLayout.pageGeometries = pageGeometries;
 
@@ -397,21 +401,21 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
 QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook() const {
     DocumentLayout documentLayout;
 
-    if ( !m_document || (m_document->status() != QDocument::Ready) ) {
+    if ( !mDocument || (mDocument->status() != QDocument::Ready) ) {
         return documentLayout;
     }
 
     QHash<int, QRect> pageGeometries;
 
-    const int pageCount = m_document->pageCount() - 1;
-    const int curPage   = m_pageNavigation->currentPage();
+    const int pageCount = mDocument->pageCount() - 1;
+    const int curPage   = mPageNavigation->currentPage();
 
     int totalWidth = 0;
 
     int startPage = 0;
     int endPage   = pageCount;
 
-    if ( not m_continuous ) {
+    if ( not mContinuous ) {
         /** First page */
         if ( curPage == 0 ) {
             startPage = 0;
@@ -431,14 +435,14 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
         }
     }
 
-    const int horizMargins = m_documentMargins.left() + m_documentMargins.right();
+    const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
 
     // calculate page sizes
     /** First page */
     if ( startPage == 0 ) {
-        QSizeF p1 = m_document->pageSize( 0 ) * m_screenResolution;
+        QSizeF p1 = mDocument->pageSize( 0 ) * mScreenResolution;
 
-        switch ( m_renderOpts.rotation() ) {
+        switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
             case QDocumentRenderOptions::Rotate90:
             case QDocumentRenderOptions::Rotate270: {
@@ -451,18 +455,18 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
             }
         }
 
-        if ( m_zoomMode == QDocumentView::CustomZoom ) {
-            p1 *= m_zoomFactor;
+        if ( mZoomMode == QDocumentView::CustomZoom ) {
+            p1 *= mZoomFactor;
         }
 
-        else if ( m_zoomMode == QDocumentView::FitToWidth ) {
-            const qreal factor = (qreal( m_viewport.width() - horizMargins ) / qreal( 2 * p1.width() + m_pageSpacing ) );
+        else if ( mZoomMode == QDocumentView::FitToWidth ) {
+            const qreal factor = (qreal( mViewPort.width() - horizMargins ) / qreal( 2 * p1.width() + mPageSpacing ) );
             p1 *= factor;
         }
 
-        else if ( m_zoomMode == QDocumentView::FitInView ) {
-            const int   margins = (m_continuous ? 0 : m_documentMargins.bottom() + m_documentMargins.top() - m_pageSpacing);
-            const QSize viewportSize( m_viewport.size() - QSize( horizMargins, m_pageSpacing + margins ) );
+        else if ( mZoomMode == QDocumentView::FitInView ) {
+            const int   margins = (mContinuous ? 0 : mDocumentMargins.bottom() + mDocumentMargins.top() - mPageSpacing);
+            const QSize viewportSize( mViewPort.size() - QSize( horizMargins, mPageSpacing + margins ) );
 
             p1 = p1.scaled( viewportSize, Qt::KeepAspectRatio );
         }
@@ -474,14 +478,14 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
     for (int page = (startPage == 0 ? 1 : startPage); page <= endPage; page += 2) {
         QSizeF pageSize;
 
-        QSizeF p1 = m_document->pageSize( page ) * m_screenResolution;
+        QSizeF p1 = mDocument->pageSize( page ) * mScreenResolution;
         QSizeF p2( 0, 0 );
 
-        if ( page + 1 < m_document->pageCount() ) {
-            p2 = m_document->pageSize( page + 1 ) * m_screenResolution;
+        if ( page + 1 < mDocument->pageCount() ) {
+            p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
         }
 
-        switch ( m_renderOpts.rotation() ) {
+        switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
             case QDocumentRenderOptions::Rotate90:
             case QDocumentRenderOptions::Rotate270: {
@@ -498,32 +502,32 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
         /** Page size is sum of individual pages, suitably pre-rotated */
         pageSize = QSizeF( p1.width() + p2.width(), qMax( p1.height(), p2.height() ) );
 
-        if ( m_zoomMode == QDocumentView::CustomZoom ) {
-            pageSize *= m_zoomFactor;
-            p1       *= m_zoomFactor;
-            p2       *= m_zoomFactor;
+        if ( mZoomMode == QDocumentView::CustomZoom ) {
+            pageSize *= mZoomFactor;
+            p1       *= mZoomFactor;
+            p2       *= mZoomFactor;
 
             if ( not not p2.isValid() ) {
-                pageSize += QSizeF( m_pageSpacing, 0 );
+                pageSize += QSizeF( mPageSpacing, 0 );
             }
         }
 
-        else if ( m_zoomMode == QDocumentView::FitToWidth ) {
-            const qreal factor = qreal( m_viewport.width() - horizMargins - m_pageSpacing ) / qreal( pageSize.width() );
+        else if ( mZoomMode == QDocumentView::FitToWidth ) {
+            const qreal factor = qreal( mViewPort.width() - horizMargins - mPageSpacing ) / qreal( pageSize.width() );
             pageSize *= factor;
             p1       *= (factor / (p2.width() <= 0 ? 2.0 : 1.0) );
             p2       *= factor;
 
             if ( not not p2.isValid() ) {
-                pageSize += QSizeF( m_pageSpacing, 0 );
+                pageSize += QSizeF( mPageSpacing, 0 );
             }
         }
 
-        else if ( m_zoomMode == QDocumentView::FitInView ) {
-            const int   margins = (m_continuous ? 0 : m_documentMargins.bottom() + m_documentMargins.top() - m_pageSpacing);
-            const QSize viewportSize( m_viewport.size() - QSize( horizMargins, m_pageSpacing + margins ) );
+        else if ( mZoomMode == QDocumentView::FitInView ) {
+            const int   margins = (mContinuous ? 0 : mDocumentMargins.bottom() + mDocumentMargins.top() - mPageSpacing);
+            const QSize viewportSize( mViewPort.size() - QSize( horizMargins, mPageSpacing + margins ) );
 
-            pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio ) + (not not p2.isValid() ? QSizeF( m_pageSpacing, 0 ) : QSizeF( 0, 0 ) );
+            pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio ) + (not not p2.isValid() ? QSizeF( mPageSpacing, 0 ) : QSizeF( 0, 0 ) );
 
             if ( not p2.isValid() ) {
                 p1 = QSizeF( pageSize.width(), pageSize.height() );
@@ -532,7 +536,7 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
             else {
                 p1        = QSizeF( pageSize.width() / 2.0, pageSize.height() );
                 p2        = QSizeF( pageSize.width() / 2.0, pageSize.height() );
-                pageSize += QSizeF( m_pageSpacing, 0 );
+                pageSize += QSizeF( mPageSpacing, 0 );
             }
         }
 
@@ -545,15 +549,15 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
         }
     }
 
-    int pageY = m_documentMargins.top();
+    int pageY = mDocumentMargins.top();
 
     // calculate page positions
     if ( startPage == 0 ) {
         const QSize s1         = pageGeometries[ 0 ].size();
         const int   pageHeight = s1.height();
-        const int   pageX      = (qMax( totalWidth, m_viewport.width() ) - s1.width() ) / 2;
+        const int   pageX      = (qMax( totalWidth, mViewPort.width() ) - s1.width() ) / 2;
         pageGeometries[ 0 ].moveTopLeft( QPoint( pageX, pageY ) );
-        pageY += pageHeight + m_pageSpacing;
+        pageY += pageHeight + mPageSpacing;
     }
 
     for (int page = (startPage == 0 ? 1 : startPage); page <= endPage; page += 2) {
@@ -563,18 +567,18 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
         const int pageHeight = qMax( size1.height(), size2.height() );
 
         // center horizontal inside the viewport
-        const int pageX = (qMax( totalWidth, m_viewport.width() ) - size1.width() - (size2.isNull() ? 0 : size2.width() + m_pageSpacing) ) / 2;
+        const int pageX = (qMax( totalWidth, mViewPort.width() ) - size1.width() - (size2.isNull() ? 0 : size2.width() + mPageSpacing) ) / 2;
 
         pageGeometries[ page ].moveTopLeft( QPoint( pageX, pageY ) );
 
         if ( size2.isValid() ) {
-            pageGeometries[ page + 1 ].moveTopLeft( QPoint( pageX + size1.width() + m_pageSpacing, pageY ) );
+            pageGeometries[ page + 1 ].moveTopLeft( QPoint( pageX + size1.width() + mPageSpacing, pageY ) );
         }
 
-        pageY += pageHeight + m_pageSpacing;
+        pageY += pageHeight + mPageSpacing;
     }
 
-    pageY += m_documentMargins.bottom() - m_pageSpacing;
+    pageY += mDocumentMargins.bottom() - mPageSpacing;
 
     documentLayout.pageGeometries = pageGeometries;
 
@@ -593,9 +597,9 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutOver
 
 
 qreal QDocumentViewImpl::yPositionForPage( int pageNumber ) const {
-    const auto it = m_documentLayout.pageGeometries.constFind( pageNumber );
+    const auto it = mDocumentLayout.pageGeometries.constFind( pageNumber );
 
-    if ( it == m_documentLayout.pageGeometries.cend() ) {
+    if ( it == mDocumentLayout.pageGeometries.cend() ) {
         return 0.0;
     }
 
@@ -604,7 +608,7 @@ qreal QDocumentViewImpl::yPositionForPage( int pageNumber ) const {
 
 
 void QDocumentViewImpl::updateDocumentLayout() {
-    m_documentLayout = calculateDocumentLayout();
+    mDocumentLayout = calculateDocumentLayout();
 
     updateScrollBars();
 }
@@ -613,15 +617,15 @@ void QDocumentViewImpl::updateDocumentLayout() {
 qreal QDocumentViewImpl::zoomFactor() const {
     QSize pageSize;
 
-    if ( m_zoomMode == QDocumentView::CustomZoom ) {
-        return m_zoomFactor;
+    if ( mZoomMode == QDocumentView::CustomZoom ) {
+        return mZoomFactor;
     }
 
-    else if ( m_zoomMode == QDocumentView::FitToWidth ) {
+    else if ( mZoomMode == QDocumentView::FitToWidth ) {
         return zoomFactorForFitWidth();
     }
 
-    else if ( m_zoomMode == QDocumentView::FitInView ) {
+    else if ( mZoomMode == QDocumentView::FitInView ) {
         return zoomFactorForFitInView();
     }
 
@@ -630,41 +634,163 @@ qreal QDocumentViewImpl::zoomFactor() const {
 
 
 qreal QDocumentViewImpl::zoomFactorForFitWidth() const {
-    int page = m_pageNavigation->currentPage();
+    int page = mPageNavigation->currentPage();
 
-    QSize       pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
-    const qreal factor   = (qreal( m_viewport.width() - m_documentMargins.left() - m_documentMargins.right() ) / qreal( pageSize.width() ) );
+    QSize       pageSize = QSizeF( mDocument->pageSize( page ) * mScreenResolution ).toSize();
+    const qreal factor   = (qreal( mViewPort.width() - mDocumentMargins.left() - mDocumentMargins.right() ) / qreal( pageSize.width() ) );
 
     return factor;
 }
 
 
 qreal QDocumentViewImpl::zoomFactorForFitInView() const {
-    int page = m_pageNavigation->currentPage();
+    int page = mPageNavigation->currentPage();
 
-    const QSize viewportSize( m_viewport.size() + QSize( -m_documentMargins.left() - m_documentMargins.right(), -m_pageSpacing ) );
+    const QSize viewportSize( mViewPort.size() + QSize( -mDocumentMargins.left() - mDocumentMargins.right(), -mPageSpacing ) );
 
-    QSize pageSize = QSizeF( m_document->pageSize( page ) * m_screenResolution ).toSize();
+    QSize pageSize = QSizeF( mDocument->pageSize( page ) * mScreenResolution ).toSize();
 
     pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio );
 
-    return pageSize.width() / m_document->pageSize( page ).width();
+    return pageSize.width() / mDocument->pageSize( page ).width();
 }
 
 
-void QDocumentViewImpl::paintSearchRects( int page, QImage& img ) {
+void QDocumentViewImpl::highlightFirstSearchInstance( int page, QVector<QRectF> rects ) {
+    /** We have already highlighted the first instance. */
+    if ( curSearchRect.isValid() ) {
+        return;
+    }
+
+    /**
+     * How `Search` results come.
+     * - Current page is searched first.
+     * - Then all the subsequent pages will be scanned till the end of the document.
+     * - Finally, the document will be scanned from the beginning til lthe current page.
+     * Since the search (at present) is sequential, the first ping will be taken to be
+     * the first search result.
+     */
+
+    /** Set the curSearchRect, and searchPage */
+    curSearchRect = rects[ 0 ];
+    searchPage    = page;
+
+    /** Geometry of @page */
+    QRectF pageGeometry    = mDocumentLayout.pageGeometries[ page ];
+    QRectF transformedRect = getTransformedRect( curSearchRect, page, false );
+
+    /** If this is the current page, make sure to focus the current search rect */
+    if ( page == mDocState.currentPage ) {
+        makeRegionVisible( transformedRect, pageGeometry );
+    }
+
+    /** Not the current page. So navigate to this page, amek visible the search rect */
+    else {
+        /** Going to the current page */
+        mPageNavigation->setCurrentPage( page );
+        makeRegionVisible( transformedRect, pageGeometry );
+    }
+}
+
+
+void QDocumentViewImpl::highlightNextSearchInstance() {
+    /** Not the last search rect of the search page */
+    if ( curSearchRect != searchRects[ searchPage ].last() ) {
+        int idx = searchRects[ searchPage ].indexOf( curSearchRect );
+
+        /** Update the highlighted rect */
+        curSearchRect = searchRects[ searchPage ][ idx + 1 ];
+    }
+
+    /** Last search rect od the search page => Go to next page. */
+    else {
+        QList<int> searchPages = searchRects.keys();
+        std::sort( searchPages.begin(), searchPages.end() );
+
+        /** Last page of search */
+        if ( searchPage == searchPages.last() ) {
+            /** Go to first search page */
+            searchPage = searchPages.first();
+        }
+
+        else {
+            /** Go to next search page */
+            searchPage = searchPages[ searchPages.indexOf( searchPage ) + 1 ];
+        }
+
+        /** Update the highlighted rect: First rect of the searchPage */
+        curSearchRect = searchRects[ searchPage ].first();
+    }
+
+    /** Go to that page if we're not already there */
+    if ( mDocState.currentPage != searchPage ) {
+        mPageNavigation->setCurrentPage( searchPage );
+    }
+
+    /** Make the rectangle visible */
+    QRectF pageGeometry    = mDocumentLayout.pageGeometries[ searchPage ];
+    QRectF transformedRect = getTransformedRect( curSearchRect, searchPage, false );
+    makeRegionVisible( transformedRect, pageGeometry );
+}
+
+
+void QDocumentViewImpl::highlightPreviousSearchInstance() {
+    /** Not the last search rect of the search page */
+    if ( curSearchRect != searchRects[ searchPage ].first() ) {
+        int idx = searchRects[ searchPage ].indexOf( curSearchRect );
+
+        /** Update the highlighted rect */
+        curSearchRect = searchRects[ searchPage ][ idx - 1 ];
+    }
+
+    /** Last search rect od the search page => Go to next page. */
+    else {
+        QList<int> searchPages = searchRects.keys();
+        std::sort( searchPages.begin(), searchPages.end() );
+
+        /** First page of search */
+        if ( searchPage == searchPages.first() ) {
+            /** Go to first search page */
+            searchPage = searchPages.last();
+        }
+
+        else {
+            /** Go to next search page */
+            searchPage = searchPages[ searchPages.indexOf( searchPage ) - 1 ];
+        }
+
+        /** Update the highlighted rect: First rect of the searchPage */
+        curSearchRect = searchRects[ searchPage ].last();
+    }
+
+    /** Go to that page if we're not already there */
+    if ( mDocState.currentPage != searchPage ) {
+        mPageNavigation->setCurrentPage( searchPage );
+    }
+
+    /** Make the rectangle visible */
+    QRectF pageGeometry    = mDocumentLayout.pageGeometries[ searchPage ];
+    QRectF transformedRect = getTransformedRect( curSearchRect, searchPage, false );
+    makeRegionVisible( transformedRect, pageGeometry );
+}
+
+
+void QDocumentViewImpl::highlightSearchInstanceInCurrentPage() {
+}
+
+
+void QDocumentViewImpl::paintOverlayRects( int page, QImage& img ) {
     /** Search Rects */
     if ( searchRects.contains( page ) ) {
-        QColor hPen   = qApp->palette().color( QPalette::Highlight );
-        QColor hBrush = QColor( hPen );
+        QColor hBrush = qApp->palette().color( QPalette::Highlight );
         hBrush.setAlphaF( 0.50 );
 
-        if ( not m_documentLayout.pageGeometries.contains( page ) ) {
+        if ( not mDocumentLayout.pageGeometries.contains( page ) ) {
             return;
         }
 
         /** Page rectangle */
-        QRectF pgRect = m_documentLayout.pageGeometries[ page ];
+        QRectF pgRect = mDocumentLayout.pageGeometries[ page ];
 
         if ( pgRect.isNull() ) {
             return;
@@ -675,12 +801,12 @@ void QDocumentViewImpl::paintSearchRects( int page, QImage& img ) {
         double yPad = 0.0;
 
         /** Document Page Size */
-        QSizeF dPageSize = m_document->pageSize( page );
+        QSizeF dPageSize = mDocument->pageSize( page );
 
         /** Rendered Page Size */
         QSizeF rPageSize = pgRect.size();
 
-        switch ( m_renderOpts.rotation() ) {
+        switch ( mRenderOpts.rotation() ) {
             case QDocumentRenderOptions::Rotate90:
             case QDocumentRenderOptions::Rotate270: {
                 dPageSize.transpose();
@@ -701,65 +827,202 @@ void QDocumentViewImpl::paintSearchRects( int page, QImage& img ) {
         painter.save();
         painter.setRenderHint( QPainter::Antialiasing );
         painter.setCompositionMode( QPainter::CompositionMode_Darken );
-        painter.setPen( hPen );
-        painter.setBrush( hBrush );
-
-        double xZoom = rPageSize.width() / dPageSize.width();
-        double yZoom = rPageSize.height() / dPageSize.height();
 
         for (QRectF rect: searchRects.value( page ) ) {
-            xPad = 2;
-            yPad = 4;
+            xPad = 2.0;
+            yPad = 3.0;
 
-            /** Transform the rectangle: handle rotations */
-            qreal x = 0.0, y = 0.0, w = 0.0, h = 0.0;
-            switch ( m_renderOpts.rotation() ) {
-                case QDocumentRenderOptions::Rotate0: {
-                    x = rect.x() * xZoom - xPad / 2.0;
-                    y = rect.y() * yZoom - yPad / 2.0;
-                    w = rect.width() * xZoom + 2 * xPad;
-                    h = rect.height() * yZoom + yPad;
-
-                    break;
-                }
-
-                case QDocumentRenderOptions::Rotate90: {
-                    x = pgRect.width() - rect.y() * xZoom - rect.height() * xZoom - yPad / 2.0;
-                    y = rect.x() * yZoom - xPad / 2.0;
-                    w = rect.height() * xZoom + 2 * yPad;
-                    h = rect.width() * yZoom + xPad;
-
-                    break;
-                }
-
-                case QDocumentRenderOptions::Rotate180: {
-                    x = pgRect.width() - rect.x() * xZoom - rect.width() * xZoom - xPad / 2.0;
-                    y = pgRect.height() - rect.y() * yZoom - rect.height() * yZoom - yPad / 2.0;
-                    w = rect.width() * xZoom + 2 * xPad;
-                    h = rect.height() * yZoom + yPad;
-
-                    break;
-                }
-
-                case QDocumentRenderOptions::Rotate270: {
-                    x = rect.y() * xZoom - yPad / 2.0;
-                    y = pgRect.height() - rect.x() * yZoom - rect.width() * yZoom - xPad / 2.0;
-                    w = rect.height() * xZoom + 2 * yPad;
-                    h = rect.width() * yZoom + xPad;
-
-                    break;
-                }
-
-                default: {
-                    break;
-                }
+            /** If this is the current rect, draw a border. Otherwise, Don't */
+            if ( (page == mPageNavigation->currentPage() ) and (rect == curSearchRect) ) {
+                painter.setPen( qApp->palette().color( QPalette::Highlight ) );
+                painter.setBrush( qApp->palette().color( QPalette::Link ) );
             }
 
-            /** Paint the rectangle */
-            painter.drawRoundedRect( QRectF( QPointF( x, y ), QSizeF( w, h ) ), 2.0, 2.0 );
+            else {
+                painter.setPen( Qt::NoPen );
+                painter.setBrush( hBrush );
+            }
+
+            /** Transform the rectangle: handle rotations */
+            QRectF transformedRect = getTransformedRect( rect, page, false );
+
+            /** Paint the rectangle along with 2px padding */
+            painter.drawRoundedRect( transformedRect.adjusted( -xPad, -yPad, xPad, yPad ), 2.0, 2.0 );
         }
 
         painter.restore();
         painter.end();
+    }
+}
+
+
+QRectF QDocumentViewImpl::getTransformedRect( QRectF rect, int page, bool inverse ) {
+    QRectF pgRect    = mDocumentLayout.pageGeometries[ page ];
+    QSizeF dPageSize = mDocument->pageSize( page );
+    QSizeF rPageSize = pgRect.size();
+
+    double xZoom = rPageSize.width() / dPageSize.width();
+    double yZoom = rPageSize.height() / dPageSize.height();
+    qreal  x = 0.0, y = 0.0, w = 0.0, h = 0.0;
+
+    if ( inverse ) {
+        switch ( mRenderOpts.rotation() ) {
+            case QDocumentRenderOptions::Rotate0: {
+                x = rect.x() / xZoom;
+                y = rect.y() / yZoom;
+                w = rect.width() / xZoom;
+                h = rect.height() / yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate90: {
+                x = pgRect.width() - rect.y() / xZoom - rect.height() / xZoom;
+                y = rect.x() / yZoom;
+                w = rect.height() / xZoom;
+                h = rect.width() / yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate180: {
+                x = pgRect.width() - rect.x() / xZoom - rect.width() / xZoom;
+                y = pgRect.height() - rect.y() / yZoom - rect.height() / yZoom;
+                w = rect.width() / xZoom;
+                h = rect.height() / yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate270: {
+                x = rect.y() / xZoom;
+                y = pgRect.height() - rect.x() / yZoom - rect.width() / yZoom;
+                w = rect.height() / xZoom;
+                h = rect.width() / yZoom;
+
+                break;
+            }
+
+            default: {
+                break;
+            }
+        }
+    }
+
+    /** Forward transformation */
+    else {
+        switch ( mRenderOpts.rotation() ) {
+            case QDocumentRenderOptions::Rotate0: {
+                x = rect.x() * xZoom;
+                y = rect.y() * yZoom;
+                w = rect.width() * xZoom;
+                h = rect.height() * yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate90: {
+                x = pgRect.width() - rect.y() * xZoom - rect.height() * xZoom;
+                y = rect.x() * yZoom;
+                w = rect.height() * xZoom;
+                h = rect.width() * yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate180: {
+                x = pgRect.width() - rect.x() * xZoom - rect.width() * xZoom;
+                y = pgRect.height() - rect.y() * yZoom - rect.height() * yZoom;
+                w = rect.width() * xZoom;
+                h = rect.height() * yZoom;
+
+                break;
+            }
+
+            case QDocumentRenderOptions::Rotate270: {
+                x = rect.y() * xZoom;
+                y = pgRect.height() - rect.x() * yZoom - rect.width() * yZoom;
+                w = rect.height() * xZoom;
+                h = rect.width() * yZoom;
+
+                break;
+            }
+
+            default: {
+                break;
+            }
+        }
+    }
+
+    return QRectF( QPointF( x, y ), QSizeF( w, h ) );
+}
+
+
+void QDocumentViewImpl::makeRegionVisible( QRectF region, QRectF pageGeometry ) {
+    /** The search rect is hiding above the viewport. */
+    if ( region.y() + pageGeometry.y() < mViewPort.y() ) {
+        /** Scroll up until we see the search rect */
+        while ( region.y() + pageGeometry.y() <= mViewPort.y() ) {
+            publ->verticalScrollBar()->setValue( publ->verticalScrollBar()->value() - 1 );
+        }
+    }
+
+    /** The search rect is hiding below the viewport. */
+    if ( region.y() + pageGeometry.y() + region.height() > mViewPort.y() + mViewPort.height() ) {
+        /** Scroll up until we see the search rect */
+        while ( region.y() + pageGeometry.y() + region.height() >= mViewPort.y() ) {
+            publ->verticalScrollBar()->setValue( publ->verticalScrollBar()->value() + 1 );
+        }
+    }
+
+    /** The search rect is hiding left of the viewport. */
+    if ( region.x() + pageGeometry.x() < mViewPort.x() ) {
+        /** Scroll up until we see the search rect */
+        while ( region.x() + pageGeometry.x() <= mViewPort.x() ) {
+            publ->horizontalScrollBar()->setValue( publ->horizontalScrollBar()->value() - 1 );
+        }
+    }
+
+    /** The search rect is hiding right of the viewport. */
+    if ( region.x() + pageGeometry.x() + region.width() > mViewPort.x() + mViewPort.width() ) {
+        /** Scroll up until we see the search rect */
+        while ( region.x() + pageGeometry.x() + region.width() >= mViewPort.x() ) {
+            publ->horizontalScrollBar()->setValue( publ->horizontalScrollBar()->value() - 1 );
+        }
+    }
+}
+
+
+void QDocumentViewImpl::makePointVisible( QPointF pt, QRectF pageGeometry ) {
+    /** The search rect is hiding above the viewport. */
+    if ( pt.y() + pageGeometry.y() < mViewPort.y() ) {
+        /** Scroll up until we see the search rect */
+        while ( pt.y() + pageGeometry.y() <= mViewPort.y() ) {
+            publ->verticalScrollBar()->setValue( publ->verticalScrollBar()->value() - 1 );
+        }
+    }
+
+    /** The search rect is hiding below the viewport. */
+    if ( pt.y() + pageGeometry.y() > mViewPort.y() + mViewPort.height() ) {
+        /** Scroll up until we see the search rect */
+        while ( pt.y() + pageGeometry.y() >= mViewPort.y() ) {
+            publ->verticalScrollBar()->setValue( publ->verticalScrollBar()->value() + 1 );
+        }
+    }
+
+    /** The search rect is hiding left of the viewport. */
+    if ( pt.x() + pageGeometry.x() < mViewPort.x() ) {
+        /** Scroll up until we see the search rect */
+        while ( pt.x() + pageGeometry.x() <= mViewPort.x() ) {
+            publ->horizontalScrollBar()->setValue( publ->horizontalScrollBar()->value() - 1 );
+        }
+    }
+
+    /** The search rect is hiding right of the viewport. */
+    if ( pt.x() + pageGeometry.x() > mViewPort.x() + mViewPort.width() ) {
+        /** Scroll up until we see the search rect */
+        while ( pt.x() + pageGeometry.x() >= mViewPort.x() ) {
+            publ->horizontalScrollBar()->setValue( publ->horizontalScrollBar()->value() - 1 );
+        }
     }
 }

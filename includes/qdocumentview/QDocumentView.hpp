@@ -80,6 +80,9 @@ class QDocumentView : public QAbstractScrollArea {
         qreal zoomFactor() const;
         QDocumentRenderOptions renderOptions() const;
 
+        QColor pageColor();
+        void setPageColor( QColor );
+
         int pageSpacing() const;
         void setPageSpacing( int spacing );
 
@@ -88,6 +91,10 @@ class QDocumentView : public QAbstractScrollArea {
 
         void searchText( QString str );
         void clearSearch();
+
+        /** Highlight the previous/next search instances */
+        void highlightNextSearchInstance();
+        void highlightPreviousSearchInstance();
 
         bool showPagesOSD() const;
         void setShowPagesOSD( bool );
@@ -119,13 +126,20 @@ class QDocumentView : public QAbstractScrollArea {
         void searchComplete( int numMatches );
 
     protected:
+        /** We want to draw our pages */
         void paintEvent( QPaintEvent *event ) override;
+
+        /** We need to reposition the widgets and repaint */
         void resizeEvent( QResizeEvent *event ) override;
+
+        /** We need to repaint the viewport by moving the pages */
         void scrollContentsBy( int dx, int dy ) override;
 
-        void keyPressEvent( QKeyEvent *kEvent );
+        /** Changes pages with keys, zoom */
+        void keyPressEvent( QKeyEvent *kEvent ) override;
 
-        void wheelEvent( QWheelEvent *wEvent );
+        /** Change the document zoom */
+        void wheelEvent( QWheelEvent *wEvent ) override;
 
     private:
         QDocumentViewImpl *impl;
