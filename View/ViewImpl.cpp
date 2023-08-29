@@ -779,6 +779,26 @@ void QDocumentViewImpl::highlightSearchInstanceInCurrentPage() {
 }
 
 
+QPair<int, int> QDocumentViewImpl::getCurrentSearchPosition() {
+    int idx = 0;
+    int total = 0;
+
+    /** We're counting the total search items */
+    for( int pg: searchRects.keys() ) {
+        for( QRectF rect: searchRects[ pg ] ) {
+            total++;
+
+            /** If (searchPage, curSearchRect) == (pg, rect), then this is the current search index */
+            if ( ( searchPage == pg ) and ( rect == curSearchRect ) ) {
+                idx = total;
+            }
+        }
+    }
+
+    return qMakePair( idx, total );
+}
+
+
 void QDocumentViewImpl::paintOverlayRects( int page, QImage& img ) {
     /** Search Rects */
     if ( searchRects.contains( page ) ) {

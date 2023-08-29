@@ -90,6 +90,11 @@ class QDocumentViewImpl {
          */
         void highlightSearchInstanceInCurrentPage();
 
+        /**
+         * Get current search position - will be calculated each time this function is called.
+         */
+        QPair<int, int> getCurrentSearchPosition();
+
         void paintOverlayRects( int, QImage& );
 
         /**

@@ -96,6 +96,9 @@ class QDocumentView : public QAbstractScrollArea {
         void highlightNextSearchInstance();
         void highlightPreviousSearchInstance();
 
+        /** Get the position of the current search */
+        QPair<int, int> getCurrentSearchPosition();
+
         bool showPagesOSD() const;
         void setShowPagesOSD( bool );
 

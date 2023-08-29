@@ -574,6 +574,11 @@ void QDocumentView::highlightPreviousSearchInstance() {
 }
 
 
+QPair<int, int> QDocumentView::getCurrentSearchPosition() {
+    return impl->getCurrentSearchPosition();
+}
+
+
 bool QDocumentView::showPagesOSD() const {
     return mShowPages;
 }
