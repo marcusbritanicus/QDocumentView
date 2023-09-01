@@ -258,6 +258,8 @@ QDocument* QDocumentView::load( QString path ) {
 
     /* Password has been supplied (if needed), document ready to be loaded */
     setDocument( doc );
+
+    return doc;
 }
 
 
