@@ -190,7 +190,7 @@ QDocumentView::~QDocumentView() {
 }
 
 
-void QDocumentView::load( QString path ) {
+QDocument* QDocumentView::load( QString path ) {
     QDocument *doc;
 
     if ( path.toLower().endsWith( "pdf" ) ) {
@@ -203,7 +203,7 @@ void QDocumentView::load( QString path ) {
 
     else {
         qWarning() << "Unknown document type:" << path;
-        return;
+        return nullptr;
     }
 
     progress->show();
@@ -247,12 +247,12 @@ void QDocumentView::load( QString path ) {
 
             /* User cancelled loading the document */
             if ( not ok ) {
-                return;
+                return nullptr;
             }
         }
 
         default: {
-            return;
+            return nullptr;
         }
     }
 

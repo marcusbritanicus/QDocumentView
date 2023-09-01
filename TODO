@@ -1,39 +1,13 @@
-# DesQ Shell
+# QDocumentView
 
-## MultiProcess Shell
-1. Shell Manager - Pure console app to manage the Shell Components
-  - Manager will keep track of all the components
-  - Use QProcess (and not QProcess::startDetached) to start the processes
-  - If any QProcess dies (exit code is non zero), intimate the user
-    and restart the process.
-  - New options:
-    - `start-process /path/to/process or desq-process` (like bg, panel, etc)
-    - `kill-process /path/to/process or desq-process` (like bg, panel, etc)
-    - `restart-process /path/to/process or desq-process` (like bg, panel, etc)
+□ Add support for (E)PS (libspectre), epub (libepub), cbz, cbr, etc
+□ Support for search rect/and highlight colors
+□ Redesign the GUI. Use a bottom panel like in DesQ::Eye::View for zoom, page nav and search.
 
-2. Shell BG      - Background-only component
-3. Shell Widgets - Desktop Widgets
-  - Each widget is a separate process
-  - Typical Widgets are
-    - SNI
-    - DesQ SuperButton
-    - Clock
-    - UsageBars
-    - Volume
-    - Backlight
-    - Pager
-  - All widgets are movable [To be implemented]
-  - Widget positions are relative to screen size
-4. Panel         - Start the panel (if enabled)
-5. Dock          - Start the dock (if enabled)
 
-## IO Process Manager
-We need a smooth IO manager that performs the copy/move operations on behalf of the file manager or any other application.
-We can easily provide a IO Progress Meter in the system tray to track the progress.
-
-### DBus Interface for Copying/Moving/... files/folders
-- `qdbus org.DesQ.Shell /org/DesQ/Shell DesQ.IO.Copy [Path1, Path2, Path3, ...] Target`
-- `qdbus org.DesQ.Shell /org/DesQ/Shell DesQ.IO.Move [Path1, Path2, Path3, ...] Target`
-- `qdbus org.DesQ.Shell /org/DesQ/Shell DesQ.IO.Link [Path1, Path2, Path3, ...] Target`
-- `qdbus org.DesQ.Shell /org/DesQ/Shell DesQ.IO.Trash [Path1, Path2, Path3, ...] Target`
-- `qdbus org.DesQ.Shell /org/DesQ/Shell DesQ.IO.Delete [Path1, Path2, Path3, ...] Target`
+Note:
+	✍ - Work in progress
+	□ - Work to be started
+	✓ - Work Completed
+	✗ - Not working on this
+	◐ - Partially complete
