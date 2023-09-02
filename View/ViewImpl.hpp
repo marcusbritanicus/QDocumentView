@@ -76,7 +76,6 @@ class QDocumentViewImpl {
         DocumentLayout calculateDocumentLayoutFacing() const;
         DocumentLayout calculateDocumentLayoutBook() const;
         DocumentLayout calculateDocumentLayoutOverview() const;
-        void updateDocumentLayout();
 
         void highlightFirstSearchInstance( int page, QVector<QRectF> rects );
         void highlightNextSearchInstance();

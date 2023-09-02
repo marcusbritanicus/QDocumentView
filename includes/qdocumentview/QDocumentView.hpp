@@ -67,7 +67,7 @@ class QDocumentView : public QAbstractScrollArea {
         explicit QDocumentView( QWidget *parent = nullptr );
         ~QDocumentView();
 
-        QDocument* load( QString );
+        QDocument * load( QString );
 
         void setDocument( QDocument *document );
         QDocument * document() const;

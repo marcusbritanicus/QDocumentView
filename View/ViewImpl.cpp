@@ -103,7 +103,7 @@ void QDocumentViewImpl::setViewport( QRect viewport ) {
     mViewPort = viewport;
 
     if ( oldSize != mViewPort.size() ) {
-        updateDocumentLayout();
+        invalidateDocumentLayout();
     }
 
     if ( mContinuous ) {
@@ -156,7 +156,9 @@ void QDocumentViewImpl::updateScrollBars() {
 
 
 void QDocumentViewImpl::invalidateDocumentLayout() {
-    updateDocumentLayout();
+    mDocumentLayout = calculateDocumentLayout();
+
+    updateScrollBars();
 }
 
 
@@ -304,7 +306,11 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
         QSizeF pageSize;
 
         QSizeF p1 = mDocument->pageSize( page ) * mScreenResolution;
-        QSizeF p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
+        QSizeF p2;
+
+        if ( page + 1 < mDocument->pageCount() ) {
+            p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
+        }
 
         switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
@@ -362,7 +368,7 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
 
         pageGeometries[ page ] = QRect( QPoint( 0, 0 ), p1.toSize() );
 
-        if ( not not p2.isValid() ) {
+        if ( p2.isValid() ) {
             pageGeometries[ page + 1 ] = QRect( QPoint( 0, 0 ), p2.toSize() );
         }
     }
@@ -590,9 +596,7 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
 
 
 QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutOverview() const {
-    DocumentLayout docLyt;
-
-    return docLyt;
+    return calculateDocumentLayoutBook();
 }
 
 
@@ -604,13 +608,6 @@ qreal QDocumentViewImpl::yPositionForPage( int pageNumber ) const {
     }
 
     return (*it).y();
-}
-
-
-void QDocumentViewImpl::updateDocumentLayout() {
-    mDocumentLayout = calculateDocumentLayout();
-
-    updateScrollBars();
 }
 
 
@@ -780,16 +777,16 @@ void QDocumentViewImpl::highlightSearchInstanceInCurrentPage() {
 
 
 QPair<int, int> QDocumentViewImpl::getCurrentSearchPosition() {
-    int idx = 0;
+    int idx   = 0;
     int total = 0;
 
     /** We're counting the total search items */
-    for( int pg: searchRects.keys() ) {
-        for( QRectF rect: searchRects[ pg ] ) {
+    for ( int pg: searchRects.keys() ) {
+        for ( QRectF rect: searchRects[ pg ] ) {
             total++;
 
             /** If (searchPage, curSearchRect) == (pg, rect), then this is the current search index */
-            if ( ( searchPage == pg ) and ( rect == curSearchRect ) ) {
+            if ( (searchPage == pg) and (rect == curSearchRect) ) {
                 idx = total;
             }
         }

@@ -190,7 +190,7 @@ QDocumentView::~QDocumentView() {
 }
 
 
-QDocument* QDocumentView::load( QString path ) {
+QDocument * QDocumentView::load( QString path ) {
     QDocument *doc;
 
     if ( path.toLower().endsWith( "pdf" ) ) {
@@ -249,6 +249,9 @@ QDocument* QDocumentView::load( QString path ) {
             if ( not ok ) {
                 return nullptr;
             }
+
+            /** Everything seems okay */
+            break;
         }
 
         default: {
@@ -284,7 +287,7 @@ void QDocumentView::setDocument( QDocument *document ) {
                 }
 
                 else if ( sts == QDocument::Ready ) {
-                    impl->updateDocumentLayout();
+                    impl->invalidateDocumentLayout();
                     viewport()->update();
                 }
 
@@ -336,8 +339,9 @@ void QDocumentView::setDocument( QDocument *document ) {
     }
 
     if ( document->status() == QDocument::Ready ) {
-        impl->updateDocumentLayout();
+        impl->calculateViewport();
         viewport()->update();
+
         impl->mSearchThread->setDocument( document );
     }
 }
@@ -368,7 +372,7 @@ void QDocumentView::setLayoutContinuous( bool yes ) {
     }
 
     impl->mContinuous = yes;
-    impl->updateDocumentLayout();
+    impl->invalidateDocumentLayout();
 
     emit layoutContinuityChanged( yes );
 }
@@ -380,18 +384,22 @@ QDocumentView::PageLayout QDocumentView::pageLayout() const {
 
 
 void QDocumentView::setPageLayout( PageLayout lyt ) {
-    if ( not impl->mDocument ) {
-        return;
-    }
-
     if ( impl->mPageLayout == lyt ) {
         return;
     }
 
     impl->mPageLayout = lyt;
-    impl->updateDocumentLayout();
 
+    /** Emit the signal */
     emit pageLayoutChanged( impl->mPageLayout );
+
+    /** Don't do the document layout if there is no document */
+    if ( not impl->mDocument ) {
+        return;
+    }
+
+    impl->invalidateDocumentLayout();
+    viewport()->update();
 }
 
 
@@ -410,7 +418,7 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
     }
 
     impl->mZoomMode = mode;
-    impl->updateDocumentLayout();
+    impl->invalidateDocumentLayout();
 
     if ( impl->mZoomMode == CustomZoom ) {
         mZoomBtn->show();
@@ -627,6 +635,7 @@ void QDocumentView::setShowZoomOSD( bool yes ) {
 
 void QDocumentView::paintEvent( QPaintEvent *event ) {
     if ( not impl->mDocument ) {
+        // impl->calculateViewport();
         QAbstractScrollArea::paintEvent( event );
         return;
     }
