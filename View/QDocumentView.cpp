@@ -28,7 +28,7 @@
 #include <qdocumentview/DjVuDocument.hpp>
 
 #include "ViewImpl.hpp"
-#include "ViewWidgets.hpp"
+#include "ViewToolbar.hpp"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -41,6 +41,13 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
     /** Piggy-back the matchesFound, and searchComplete signals from the search thread */
     connect( impl->mSearchThread, &QDocumentSearch::matchesFound,   this, &QDocumentView::matchesFound );
     connect( impl->mSearchThread, &QDocumentSearch::searchComplete, this, &QDocumentView::searchComplete );
+
+    /** Update our inbuilt toolbar */
+    connect(
+        impl->mSearchThread, &QDocumentSearch::matchesFound, [ = ] () {
+            /** If we have more than one match, we can enable the search buttons */
+        }
+    );
 
     connect(
         impl->mSearchThread, &QDocumentSearch::resultsReady, [ this ]( int page, QVector<QRectF> results ) {
@@ -85,21 +92,21 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
         }
     );
 
-    /* Zoom buttons */
-    mZoomBtn = new Zoom( this );
+    /* ToolBar */
+    toolBar = new ViewToolbar( this );
 
+    /* Zoom buttons */
     if ( impl->mZoomMode == CustomZoom ) {
-        mZoomBtn->show();
-        mZoomBtn->setEnlargeEnabled( impl->mZoomFactor < 4.0 ? true : false );
-        mZoomBtn->setDwindleEnabled( impl->mZoomFactor > 0.1 ? true : false );
+        toolBar->setZoomButtonsEnabled( impl->mZoomFactor < 4.0 ? true : false, impl->mZoomFactor > 0.1 ? true : false );
     }
 
     else {
-        mZoomBtn->hide();
+        toolBar->setZoomButtonsEnabled( false, false );
     }
 
+    /* Zoom buttons signals */
     connect(
-        mZoomBtn, &Zoom::clicked, [ = ]( QString action ) {
+        toolBar, &ViewToolbar::zoomClicked, [ = ]( QString action ) {
             if ( action == "enlarge" ) {
                 /**
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
@@ -138,15 +145,61 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                 }
             }
 
-            mZoomBtn->setEnlargeEnabled( impl->mZoomFactor < 4.0 ? true : false );
-            mZoomBtn->setDwindleEnabled( impl->mZoomFactor > 0.1 ? true : false );
+            toolBar->setZoomButtonsEnabled( impl->mZoomFactor < 4.0 ? true : false, impl->mZoomFactor > 0.1 ? true : false );
         }
     );
 
-    /* Page buttons */
-    mPagesBtn = new PageWidget( this );
-    connect( impl->mPageNavigation, &QDocumentNavigation::currentPageChanged, mPagesBtn,             &PageWidget::setCurrentPage );
-    connect( mPagesBtn,             &PageWidget::loadPage,                    impl->mPageNavigation, &QDocumentNavigation::setCurrentPage );
+    /* Page buttons signals */
+    connect( impl->mPageNavigation, &QDocumentNavigation::currentPageChanged, toolBar, &ViewToolbar::setCurrentPage );
+    connect(
+        toolBar, &ViewToolbar::loadPage, [ = ] ( int pageNum ) {
+            impl->mPageNavigation->setCurrentPage( pageNum );
+            /** Grab focus */
+            setFocus();
+        }
+    );
+
+    /** Search */
+    connect(
+        toolBar, &ViewToolbar::search, [ = ] ( QString needle, bool fresh, bool reverse ) {
+            /** Text changed */
+            if ( fresh ) {
+                /** Non-zero text length: search for it. */
+                if ( needle.length() ) {
+                    searchText( needle );
+                }
+
+                /** No text: clear search */
+                else {
+                    clearSearch();
+                }
+            }
+
+            /** Same text */
+            else {
+                /** Previous instance */
+                if ( reverse ) {
+                    highlightPreviousSearchInstance();
+                }
+
+                else {
+                    highlightNextSearchInstance();
+                }
+            }
+        }
+    );
+
+    /* 100% Zoom */
+    QShortcut *shortcut = new QShortcut( this );
+
+    shortcut->setKey( QKeySequence( Qt::CTRL | Qt::Key_0 ) );
+    connect(
+        shortcut, &QShortcut::activated, [ = ]() {
+            if ( impl->mDocument ) {
+                setZoomFactor( 1.0 );
+            }
+        }
+    );
 
     /* ProgressBar */
     progress = new QProgressBar( this );
@@ -156,8 +209,6 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
     progress->setStyle( QStyleFactory::create( "fusion" ) );
     progress->setFormat( "" );
 
-    mZoomBtn->hide();
-    mPagesBtn->hide();
     progress->hide();
 
     /* Does this work? */
@@ -169,22 +220,11 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
 
     /* Don't draw a frame around the QScrollArea */
     setFrameStyle( QFrame::NoFrame );
-
-    /* 100% Zoom */
-    QShortcut *shortcut = new QShortcut( this );
-
-    shortcut->setKey( QKeySequence( Qt::CTRL | Qt::Key_0 ) );
-    connect(
-        shortcut, &QShortcut::activated, [ = ]() {
-            setZoomFactor( 1.0 );
-        }
-    );
 }
 
 
 QDocumentView::~QDocumentView() {
-    delete mZoomBtn;
-    delete mPagesBtn;
+    delete toolBar;
     delete progress;
     delete impl;
 }
@@ -327,15 +367,15 @@ void QDocumentView::setDocument( QDocument *document ) {
     impl->mPageNavigation->setDocument( impl->mDocument );
     impl->mPageRenderer->setDocument( impl->mDocument );
 
-    mPagesBtn->setMaximumPages( document->pageCount() );
-    mPagesBtn->setCurrentPage( impl->mPageNavigation->currentPage() );
+    toolBar->setMaximumPages( document->pageCount() );
+    toolBar->setCurrentPage( impl->mPageNavigation->currentPage() );
 
-    if ( mShowZoom ) {
-        mZoomBtn->show();
+    if ( showToolBar ) {
+        toolBar->show();
     }
 
-    if ( mShowPages ) {
-        mPagesBtn->show();
+    else {
+        toolBar->hide();
     }
 
     if ( document->status() == QDocument::Ready ) {
@@ -421,11 +461,11 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
     impl->invalidateDocumentLayout();
 
     if ( impl->mZoomMode == CustomZoom ) {
-        mZoomBtn->show();
+        toolBar->setZoomButtonsEnabled( impl->mZoomFactor < 4.0 ? true : false, impl->mZoomFactor > 0.1 ? true : false );
     }
 
     else {
-        mZoomBtn->hide();
+        toolBar->setZoomButtonsEnabled( false, false );
     }
 
     emit zoomModeChanged( impl->mZoomMode );
@@ -540,6 +580,13 @@ void QDocumentView::setDocumentMargins( QMargins margins ) {
 }
 
 
+void QDocumentView::focusSearch() {
+    if ( impl->mDocument and showToolBar ) {
+        toolBar->focusSearch();
+    }
+}
+
+
 void QDocumentView::searchText( QString str ) {
     /** Clear previous search */
     impl->searchRects.clear();
@@ -562,6 +609,12 @@ void QDocumentView::clearSearch() {
 
     /** Clear current search instance rect */
     impl->curSearchRect = QRectF();
+
+    /** Clear the search text from the toolbar */
+    toolBar->clearSearch();
+
+    /** Focus the view */
+    setFocus();
 
     /** Update the viewport */
     viewport()->update();
@@ -589,52 +642,33 @@ QPair<int, int> QDocumentView::getCurrentSearchPosition() {
 }
 
 
-bool QDocumentView::showPagesOSD() const {
-    return mShowPages;
+bool QDocumentView::showToolsOSD() const {
+    return showToolBar;
 }
 
 
-void QDocumentView::setShowPagesOSD( bool yes ) {
-    mShowPages = yes;
+void QDocumentView::setShowToolsOSD( bool yes ) {
+    showToolBar = yes;
 
-    if ( not impl->mDocument ) {
+    if ( impl->mDocument == nullptr ) {
         return;
     }
 
     if ( yes ) {
-        mPagesBtn->show();
+        toolBar->show();
+
+        toolBar->move( 0, viewport()->height() - toolBar->height() );
+        toolBar->setFixedWidth( viewport()->width() );
     }
 
     else {
-        mPagesBtn->hide();
-    }
-}
-
-
-bool QDocumentView::showZoomOSD() const {
-    return mShowZoom;
-}
-
-
-void QDocumentView::setShowZoomOSD( bool yes ) {
-    mShowZoom = yes;
-
-    if ( not impl->mDocument ) {
-        return;
-    }
-
-    if ( yes ) {
-        mZoomBtn->show();
-    }
-
-    else {
-        mZoomBtn->hide();
+        toolBar->hide();
     }
 }
 
 
 void QDocumentView::paintEvent( QPaintEvent *event ) {
-    if ( not impl->mDocument ) {
+    if ( impl->mDocument == nullptr ) {
         // impl->calculateViewport();
         QAbstractScrollArea::paintEvent( event );
         return;
@@ -670,14 +704,14 @@ void QDocumentView::paintEvent( QPaintEvent *event ) {
 void QDocumentView::resizeEvent( QResizeEvent *event ) {
     QAbstractScrollArea::resizeEvent( event );
 
-    if ( impl->mDocument ) {
-        if ( mZoomBtn and mZoomBtn->isVisible() ) {
-            mZoomBtn->move( 5, viewport()->height() - mZoomBtn->height() - 5 );
-        }
+    if ( showToolBar ) {
+        toolBar->show();
+        toolBar->move( 0, viewport()->height() - toolBar->height() );
+        toolBar->setFixedWidth( viewport()->width() );
+    }
 
-        if ( mPagesBtn and mPagesBtn->isVisible() ) {
-            mPagesBtn->move( viewport()->width() - mPagesBtn->width() - 5, viewport()->height() - mPagesBtn->height() - 5 );
-        }
+    if ( impl->mDocument ) {
+        toolBar->setEnabled( true );
 
         impl->updateScrollBars();
 
@@ -694,6 +728,10 @@ void QDocumentView::resizeEvent( QResizeEvent *event ) {
             }
         );
     }
+
+    else {
+        toolBar->setDisabled( true );
+    }
 }
 
 
@@ -704,7 +742,7 @@ void QDocumentView::scrollContentsBy( int dx, int dy ) {
 }
 
 
-void QDocumentView::keyPressEvent( QKeyEvent *kEvent ) {
+void QDocumentView::keyReleaseEvent( QKeyEvent *kEvent ) {
     switch ( kEvent->key() ) {
         case Qt::Key_Right: {
             /* Go to next page */

@@ -26,8 +26,7 @@
 #include <QDocument.hpp>
 #include <QDocumentRenderOptions.hpp>
 
-class Zoom;
-class PageWidget;
+class ViewToolbar;
 class QProgressBar;
 
 class QDocumentNavigation;
@@ -89,6 +88,7 @@ class QDocumentView : public QAbstractScrollArea {
         QMargins documentMargins() const;
         void setDocumentMargins( QMargins margins );
 
+        void focusSearch();
         void searchText( QString str );
         void clearSearch();
 
@@ -99,11 +99,8 @@ class QDocumentView : public QAbstractScrollArea {
         /** Get the position of the current search */
         QPair<int, int> getCurrentSearchPosition();
 
-        bool showPagesOSD() const;
-        void setShowPagesOSD( bool );
-
-        bool showZoomOSD() const;
-        void setShowZoomOSD( bool );
+        bool showToolsOSD() const;
+        void setShowToolsOSD( bool );
 
     public Q_SLOTS:
         void setLayoutContinuous( bool );
@@ -139,7 +136,7 @@ class QDocumentView : public QAbstractScrollArea {
         void scrollContentsBy( int dx, int dy ) override;
 
         /** Changes pages with keys, zoom */
-        void keyPressEvent( QKeyEvent *kEvent ) override;
+        void keyReleaseEvent( QKeyEvent *kEvent ) override;
 
         /** Change the document zoom */
         void wheelEvent( QWheelEvent *wEvent ) override;
@@ -147,10 +144,8 @@ class QDocumentView : public QAbstractScrollArea {
     private:
         QDocumentViewImpl *impl;
 
-        Zoom *mZoomBtn;
-        PageWidget *mPagesBtn;
-        QProgressBar *progress;
+        ViewToolbar *toolBar;
+        bool showToolBar;
 
-        bool mShowZoom  = true;
-        bool mShowPages = true;
+        QProgressBar *progress;
 };

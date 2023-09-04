@@ -54,7 +54,7 @@ ImplHeaders = [
 	'Document/QDocumentNavigationImpl.hpp',
 	'Document/RendererImpl.hpp',
 	'View/ViewImpl.hpp',
-	'View/ViewWidgets.hpp'
+	'View/ViewToolbar.hpp'
 ]
 
 Sources = [
@@ -65,7 +65,7 @@ Sources = [
     'PdfView/PopplerDocument.cpp',
     'View/QDocumentView.cpp',
     'View/ViewImpl.cpp',
-    'View/ViewWidgets.cpp',
+    'View/ViewToolbar.cpp',
 ]
 
 if DjVuLibre.found()
