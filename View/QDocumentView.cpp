@@ -109,21 +109,11 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
         toolBar, &ViewToolbar::zoomClicked, [ = ]( QString action ) {
             if ( action == "enlarge" ) {
                 /**
-                 * Check if the next zoom factor is greater than zoomFactor for FitInView
+                 * Check if the zoomFactor for FitInView in in between the current and the next zoomFactor.
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( impl->mZoomFactor * 1.10 > impl->zoomFactorForFitInView() ) {
-                    setZoomFactor( impl->zoomFactorForFitInView() );
-                }
 
-                /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( impl->mZoomFactor * 1.10 > impl->zoomFactorForFitWidth() ) {
-                    setZoomFactor( impl->zoomFactorForFitWidth() );
-                }
-
-                else {
-                    setZoomFactor( impl->mZoomFactor * 1.10 );
-                }
+                setZoomFactor( impl->getNextZoomFactor( false ) );
             }
 
             else {
@@ -131,18 +121,7 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
                  * Check if the next zoom factor is greater than zoomFactor for FitInView
                  * If yes, set the zoom to Fit the page in view.
                  */
-                if ( impl->mZoomFactor / 1.10 > impl->zoomFactorForFitInView() ) {
-                    setZoomFactor( impl->zoomFactorForFitInView() );
-                }
-
-                /** Check if the next zoom factor is greater than zoomFactor for FitWidth */
-                else if ( impl->mZoomFactor / 1.10 > impl->zoomFactorForFitWidth() ) {
-                    setZoomFactor( impl->zoomFactorForFitWidth() );
-                }
-
-                else {
-                    setZoomFactor( impl->mZoomFactor / 1.10 );
-                }
+                setZoomFactor( impl->getNextZoomFactor( true ) );
             }
 
             toolBar->setZoomButtonsEnabled( impl->mZoomFactor < 4.0 ? true : false, impl->mZoomFactor > 0.1 ? true : false );
@@ -516,6 +495,17 @@ void QDocumentView::setZoomFactor( qreal factor ) {
     }
 
     impl->mZoomFactor = factor;
+
+    toolBar->setZoomText( QString( "%1 %" ).arg( impl->mZoomFactor * 100, 0, 'f', 0 ) );
+
+    if ( factor == impl->zoomFactorForFitWidth() ) {
+        toolBar->setZoomText( "Fit width" );
+    }
+
+    else if ( factor == impl->zoomFactorForFitInView() ) {
+        toolBar->setZoomText( "Fit page" );
+    }
+
     impl->invalidateDocumentLayout();
     viewport()->update();
 
@@ -776,13 +766,15 @@ void QDocumentView::keyReleaseEvent( QKeyEvent *kEvent ) {
 
         case Qt::Key_Plus: {
             /* Zoom In */
-            setZoomFactor( impl->mZoomFactor * 1.10 );
+            // setZoomFactor( impl->mZoomFactor * 1.10 );
+            toolBar->zoomClicked( "enlarge" );
             break;
         }
 
         case Qt::Key_Minus: {
             /* Zoom Out */
-            setZoomFactor( impl->mZoomFactor / 1.10 );
+            // setZoomFactor( impl->mZoomFactor / 1.10 );
+            toolBar->zoomClicked( "dwindle" );
             break;
         }
 

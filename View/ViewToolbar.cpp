@@ -119,6 +119,11 @@ void ViewToolbar::setZoomButtonsEnabled( bool zoomInBtn, bool zoomOutBtn ) {
 }
 
 
+void ViewToolbar::setZoomText( QString text ) {
+    mZoomLbl->setText( text );
+}
+
+
 void ViewToolbar::setMaximumPages( int pages ) {
     mMaxPages = pages;
     mPageLbl->setText( QString( "of %1" ).arg( pages ) );

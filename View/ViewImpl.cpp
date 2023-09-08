@@ -44,7 +44,6 @@ QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
     mPageSpacing        = 5;                           // Default space between two pages
     mDocumentMargins    = QMargins( 6, 6, 6, 6 );      // Page margins
     mBlockPageScrolling = false;                       // Flag to handle setting current page
-    mScreenResolution   = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
 
     mDocState.currentPage     = 0;
     mDocState.currentPosition = QPointF( 0, 0 );
@@ -208,9 +207,11 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutSing
     const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
     int       pageY        = mDocumentMargins.top();
 
+    qreal screenResolution = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
     // calculate page sizes
     for (int page = startPage; page <= endPage; ++page) {
-        QSizeF pageSize = mDocument->pageSize( page ) * mScreenResolution;
+        QSizeF pageSize = mDocument->pageSize( page ) * screenResolution;
 
         switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
@@ -301,15 +302,17 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutFaci
 
     const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
 
+    qreal screenResolution = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
     // calculate page sizes
     for (int page = startPage; page <= endPage; page += 2) {
         QSizeF pageSize;
 
-        QSizeF p1 = mDocument->pageSize( page ) * mScreenResolution;
+        QSizeF p1 = mDocument->pageSize( page ) * screenResolution;
         QSizeF p2;
 
         if ( page + 1 < mDocument->pageCount() ) {
-            p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
+            p2 = mDocument->pageSize( page + 1 ) * screenResolution;
         }
 
         switch ( mRenderOpts.rotation() ) {
@@ -443,10 +446,12 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
 
     const int horizMargins = mDocumentMargins.left() + mDocumentMargins.right();
 
+    qreal screenResolution = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
     // calculate page sizes
     /** First page */
     if ( startPage == 0 ) {
-        QSizeF p1 = mDocument->pageSize( 0 ) * mScreenResolution;
+        QSizeF p1 = mDocument->pageSize( 0 ) * screenResolution;
 
         switch ( mRenderOpts.rotation() ) {
             /* 90 degree rotated */
@@ -484,11 +489,11 @@ QDocumentViewImpl::DocumentLayout QDocumentViewImpl::calculateDocumentLayoutBook
     for (int page = (startPage == 0 ? 1 : startPage); page <= endPage; page += 2) {
         QSizeF pageSize;
 
-        QSizeF p1 = mDocument->pageSize( page ) * mScreenResolution;
+        QSizeF p1 = mDocument->pageSize( page ) * screenResolution;
         QSizeF p2( 0, 0 );
 
         if ( page + 1 < mDocument->pageCount() ) {
-            p2 = mDocument->pageSize( page + 1 ) * mScreenResolution;
+            p2 = mDocument->pageSize( page + 1 ) * screenResolution;
         }
 
         switch ( mRenderOpts.rotation() ) {
@@ -633,23 +638,80 @@ qreal QDocumentViewImpl::zoomFactor() const {
 qreal QDocumentViewImpl::zoomFactorForFitWidth() const {
     int page = mPageNavigation->currentPage();
 
-    QSize       pageSize = QSizeF( mDocument->pageSize( page ) * mScreenResolution ).toSize();
+    qreal screenResolution = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
+    QSize       pageSize = QSizeF( mDocument->pageSize( page ) * screenResolution ).toSize();
     const qreal factor   = (qreal( mViewPort.width() - mDocumentMargins.left() - mDocumentMargins.right() ) / qreal( pageSize.width() ) );
 
     return factor;
 }
 
 
+qreal QDocumentViewImpl::zoomFactorForFitHeight() const {
+    const int   page             = mPageNavigation->currentPage();
+    const qreal screenResolution = QGuiApplication::primaryScreen()->logicalDotsPerInch() / 72.0;
+
+    QSize       pageSize = QSizeF( mDocument->pageSize( page ) * screenResolution ).toSize();
+    const qreal factor   = (qreal( mViewPort.height() - mDocumentMargins.top() - mDocumentMargins.bottom() ) / qreal( pageSize.height() ) );
+
+    return factor;
+}
+
+
 qreal QDocumentViewImpl::zoomFactorForFitInView() const {
-    int page = mPageNavigation->currentPage();
+    const int page     = mPageNavigation->currentPage();
+    QSizeF    pageSize = mDocument->pageSize( page );
 
-    const QSize viewportSize( mViewPort.size() + QSize( -mDocumentMargins.left() - mDocumentMargins.right(), -mPageSpacing ) );
+    /** Landscape */
+    if ( pageSize.width() > pageSize.height() ) {
+        return zoomFactorForFitWidth();
+    }
 
-    QSize pageSize = QSizeF( mDocument->pageSize( page ) * mScreenResolution ).toSize();
+    /** Portrait */
+    else {
+        return zoomFactorForFitHeight();
+    }
+}
 
-    pageSize = pageSize.scaled( viewportSize, Qt::KeepAspectRatio );
 
-    return pageSize.width() / mDocument->pageSize( page ).width();
+qreal QDocumentViewImpl::getNextZoomFactor( bool reverse ) const {
+    if ( reverse ) {
+        qreal nextZoom  = mZoomFactor - 0.10;
+        qreal zoomView  = zoomFactorForFitInView();
+        qreal zoomWidth = zoomFactorForFitWidth();
+
+        /** Fit in view is in between current and lower */
+        if ( (nextZoom < zoomView) and (zoomView < mZoomFactor) ) {
+            return zoomView;
+        }
+
+        else if ( (nextZoom < zoomWidth) and (zoomWidth < mZoomFactor) ) {
+            return zoomWidth;
+        }
+
+        else {
+            return nextZoom;
+        }
+    }
+
+    else {
+        qreal nextZoom  = mZoomFactor + 0.10;
+        qreal zoomView  = zoomFactorForFitInView();
+        qreal zoomWidth = zoomFactorForFitWidth();
+
+        /** Fit in view is in between current and lower */
+        if ( (mZoomFactor < zoomView) and (zoomView < nextZoom) ) {
+            return zoomView;
+        }
+
+        else if ( (mZoomFactor < zoomWidth) and (zoomWidth < nextZoom) ) {
+            return zoomWidth;
+        }
+
+        else {
+            return nextZoom;
+        }
+    }
 }
 
 

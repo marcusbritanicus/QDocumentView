@@ -34,6 +34,7 @@ class ViewToolbar : public QWidget {
 
         /** Zoom related */
         void setZoomButtonsEnabled( bool zoomInBtn, bool zoomOut );
+        void setZoomText( QString );
 
         /** Pages related */
         void setMaximumPages( int );

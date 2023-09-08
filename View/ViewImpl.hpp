@@ -46,7 +46,12 @@ class QDocumentViewImpl {
 
         qreal zoomFactor() const;
         qreal zoomFactorForFitWidth() const;
+        qreal zoomFactorForFitHeight() const;
+
         qreal zoomFactorForFitInView() const;
+
+        /** Reverse zoom means reduce the zoom */
+        qreal getNextZoomFactor( bool reverse ) const;
 
         struct DocumentLayout {
             QSize             documentSize;
