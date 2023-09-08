@@ -70,7 +70,31 @@ void RenderTask::run() {
         return;
     }
 
-    QImage img = mPage->render( mImgSize, mOpts );
+    /** The size is pre-rotated for the given rotation. */
+    QSize tgtSize;
+    switch ( mOpts.rotation() ) {
+        case QDocumentRenderOptions::Rotate0: {
+            tgtSize = QSize( mImgSize.width(), mImgSize.height() );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate90: {
+            tgtSize = QSize( mImgSize.height(), mImgSize.width() );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate180: {
+            tgtSize = QSize( mImgSize.width(), mImgSize.height() );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate270: {
+            tgtSize = QSize( mImgSize.height(), mImgSize.width() );
+            break;
+        }
+    }
+
+    QImage img = mPage->render( tgtSize, mOpts );
 
     /* Emit only if the task is valid */
     if ( mId > 0 ) {
