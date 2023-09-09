@@ -78,6 +78,7 @@ class PdfPage : public QDocumentPage {
         /* Render and return a page */
         QImage render( QSize, QDocumentRenderOptions ) const;
         QImage render( qreal zoomFactor, QDocumentRenderOptions ) const;
+        QImage render( int dpiX, int dpiY, QDocumentRenderOptions ) const;
 
         /* Page Text */
         QString pageText() const;

@@ -210,6 +210,11 @@ QImage PdfPage::render( qreal zoomFactor, QDocumentRenderOptions opts ) const {
 }
 
 
+QImage PdfPage::render( int dpiX, int dpiY, QDocumentRenderOptions opts ) const {
+    return render( dpiX / 72.0, dpiY / 72.0, opts );
+}
+
+
 QString PdfPage::pageText() const {
     return text( QRectF() );
 }

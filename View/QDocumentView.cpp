@@ -24,8 +24,10 @@
 #include <qdocumentview/QDocumentSearch.hpp>
 #include <qdocumentview/QDocument.hpp>
 #include <qdocumentview/QDocumentNavigation.hpp>
+
 #include <qdocumentview/PopplerDocument.hpp>
 #include <qdocumentview/DjVuDocument.hpp>
+#include <qdocumentview/PsDocument.hpp>
 
 #include "ViewImpl.hpp"
 #include "ViewToolbar.hpp"
@@ -34,6 +36,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QScroller>
+#include <QPrinter>
 
 QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) {
     impl = new QDocumentViewImpl( this );
@@ -218,6 +221,10 @@ QDocument * QDocumentView::load( QString path ) {
 
     else if ( path.toLower().endsWith( "djv" ) or path.toLower().endsWith( "djvu" ) ) {
         doc = new DjVuDocument( path );
+    }
+
+    else if ( path.toLower().endsWith( "eps" ) or path.toLower().endsWith( "ps" ) ) {
+        doc = new PsDocument( path );
     }
 
     else {
@@ -467,6 +474,8 @@ void QDocumentView::setRenderOptions( QDocumentRenderOptions opts ) {
 
     impl->mRenderOpts = opts;
     impl->invalidateDocumentLayout();
+
+    viewport()->update();
 
     emit renderOptionsChanged( impl->mRenderOpts );
 }
@@ -805,4 +814,66 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
     }
 
     QAbstractScrollArea::wheelEvent( wEvent );
+}
+
+
+bool QDocumentView::print( QPrinter *printer, QDocumentPrintOptions opts, QList<int> pages ) {
+    QScopedPointer<QProgressDialog> progressDialog( new QProgressDialog( this ) );
+
+    progressDialog->setLabelText( tr( "Printing '%1'..." ).arg( impl->mDocument->fileName() ) );
+    progressDialog->setRange( 1, pages.length() );
+
+    QPainter painter;
+
+    if ( !painter.begin( printer ) ) {
+        return false;
+    }
+
+    int pg = 1;
+
+    for ( int index: pages ) {
+        progressDialog->setValue( index );
+
+        QApplication::processEvents();
+
+        painter.save();
+
+        const QDocumentPage *page = impl->mDocument->page( index );
+
+        if ( opts.fitToPage ) {
+            const qreal pageWidth  = printer->physicalDpiX() / 72.0 * page->pageSize().width();
+            const qreal pageHeight = printer->physicalDpiY() / 72.0 * page->pageSize().width();
+
+            const qreal scaleFactor = qMin( printer->width() / pageWidth, printer->height() / pageHeight );
+
+            painter.setTransform( QTransform::fromScale( scaleFactor, scaleFactor ) );
+        }
+
+        else {
+            const qreal scaleFactorX = static_cast<qreal>(printer->logicalDpiX() ) / static_cast<qreal>(printer->physicalDpiX() );
+            const qreal scaleFactorY = static_cast<qreal>(printer->logicalDpiY() ) / static_cast<qreal>(printer->physicalDpiY() );
+
+            painter.setTransform( QTransform::fromScale( scaleFactorX, scaleFactorY ) );
+        }
+
+        painter.drawImage( QPointF(), page->render( QSize( printer->physicalDpiX(), printer->physicalDpiY() ), QDocumentRenderOptions() ) );
+
+        painter.restore();
+
+        pg++;
+
+        if ( pg < pages.count() ) {
+            printer->newPage();
+        }
+
+        QApplication::processEvents();
+
+        if ( progressDialog->wasCanceled() ) {
+            printer->abort();
+
+            return false;
+        }
+    }
+
+    return true;
 }

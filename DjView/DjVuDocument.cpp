@@ -241,6 +241,12 @@ QImage DjPage::render( qreal zoomFactor, QDocumentRenderOptions opts ) const {
 }
 
 
+QImage DjPage::render( int dpiX, int dpiY, QDocumentRenderOptions opts ) const {
+    // return render( (mPageSize * zoomFactor).toSize(), opts );
+    return QImage();
+}
+
+
 QString DjPage::pageText() const {
     // return text( QRectF() );
     return QString();

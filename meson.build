@@ -35,7 +35,8 @@ elif get_option('use_qt_version') == 'qt6'
 
 endif
 
-DjVuLibre = dependency( 'ddjvuapi', required: false )
+DjVuLibre  = dependency( 'ddjvuapi', required: false )
+LibSpectre = dependency( 'libspectre', required: false )
 
 Deps     = [ QtBase, QtPrint, Poppler ]
 Requires = [ Poppler, ]
@@ -73,6 +74,13 @@ if DjVuLibre.found()
 	Requires += [ DjVuLibre, ]
 	Headers  += [ 'includes/qdocumentview/DjVuDocument.hpp', ]
 	Sources  += [ 'DjView/DjVuDocument.cpp', ]
+endif
+
+if LibSpectre.found()
+	Deps     += [ LibSpectre, ]
+	Requires += [ LibSpectre, ]
+	Headers  += [ 'includes/qdocumentview/PsDocument.hpp', ]
+	Sources  += [ 'PsView/PsDocument.cpp', ]
 endif
 
 Mocs = Qt.compile_moc(

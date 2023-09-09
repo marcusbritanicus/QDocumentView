@@ -28,14 +28,14 @@
 #include <QDocument.hpp>
 #include <QDocumentRenderOptions.hpp>
 
-#include <libdjvu/ddjvuapi.h>
+#include <libspectre/spectre-document.h>
 
-class DjVuDocument : public QDocument {
+class PsDocument : public QDocument {
     Q_OBJECT;
 
     public:
-        DjVuDocument( QString djvuPath );
-        ~DjVuDocument();
+        PsDocument( QString djvuPath );
+        ~PsDocument();
 
         /* Set a password */
         void setPassword( QString password );
@@ -53,14 +53,14 @@ class DjVuDocument : public QDocument {
 
     private:
         /* Pointer to our actual djvu document */
-        ddjvu_context_t *mDjCtx;
-        ddjvu_document_t *mDjDoc;
+        SpectreDocument* mPsDoc;
+        SpectreRenderContext* mRenderCtxt;
 };
 
-class DjPage : public QDocumentPage {
+class PsPage : public QDocumentPage {
     public:
-        DjPage( int, ddjvu_document_t * );
-        ~DjPage();
+        PsPage( int, SpectreRenderContext * );
+        ~PsPage();
 
         /* Way to store Poppler::Page */
         void setPageData( void *data );
@@ -86,8 +86,8 @@ class DjPage : public QDocumentPage {
         QList<QRectF> search( QString query, QDocumentRenderOptions ) const;
 
     private:
-        ddjvu_page_t *m_page;
-        ddjvu_document_t *mDjDoc;
+        SpectrePage *mPage;
+        SpectreRenderContext* mRenderCtxt;
 
         QSizeF mPageSize;
 };

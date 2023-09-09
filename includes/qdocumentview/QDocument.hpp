@@ -157,8 +157,9 @@ class QDocumentPage {
         virtual int pageNo();
 
         /* Render and return a page */
-        virtual QImage render( QSize, QDocumentRenderOptions ) const            = 0;
-        virtual QImage render( qreal zoomFactor, QDocumentRenderOptions ) const = 0;
+        virtual QImage render( QSize, QDocumentRenderOptions ) const              = 0;
+        virtual QImage render( qreal zoomFactor, QDocumentRenderOptions ) const   = 0;
+        virtual QImage render( int dpiX, int dpiY, QDocumentRenderOptions ) const = 0;
 
         /* Page Text */
         virtual QString pageText() const = 0;
