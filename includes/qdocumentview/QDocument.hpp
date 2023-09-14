@@ -75,6 +75,7 @@ class QDocument : public QObject {
         /* Document File Name and File Path */
         virtual QString fileName() const;
         virtual QString filePath() const;
+        virtual QString fileNameAndPath() const;
 
         /* Pdf Info / Metadata */
         virtual QString title() const    = 0;

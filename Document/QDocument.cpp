@@ -51,12 +51,17 @@ QDocument::QDocument( QString path ) : QObject() {
 
 
 QString QDocument::fileName() const {
-    return QFileInfo( mDocPath ).baseName();
+    return QFileInfo( mDocPath ).fileName();
 }
 
 
 QString QDocument::filePath() const {
     return QFileInfo( mDocPath ).path();
+}
+
+
+QString QDocument::fileNameAndPath() const {
+    return mDocPath;
 }
 
 

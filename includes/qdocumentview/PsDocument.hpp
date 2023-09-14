@@ -53,8 +53,8 @@ class PsDocument : public QDocument {
 
     private:
         /* Pointer to our actual djvu document */
-        SpectreDocument* mPsDoc;
-        SpectreRenderContext* mRenderCtxt;
+        SpectreDocument *mPsDoc;
+        SpectreRenderContext *mRenderCtxt;
 };
 
 class PsPage : public QDocumentPage {
@@ -87,7 +87,7 @@ class PsPage : public QDocumentPage {
 
     private:
         SpectrePage *mPage;
-        SpectreRenderContext* mRenderCtxt;
+        SpectreRenderContext *mRenderCtxt;
 
         QSizeF mPageSize;
 };

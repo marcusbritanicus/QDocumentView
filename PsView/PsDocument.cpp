@@ -99,8 +99,8 @@ void PsDocument::load() {
 
     spectre_render_context_set_antialias_bits(
         mRenderCtxt,        // Render context
-        1,                  // No. of bits for rendering antialiased graphics
-        1                   // No, of bits for rendering antialiased text
+        4,                  // No. of bits for rendering antialiased graphics
+        4                   // No, of bits for rendering antialiased text
     );
 
     int pages = spectre_document_get_n_pages( mPsDoc );
@@ -138,7 +138,7 @@ void PsDocument::close() {
 }
 
 
-PsPage::PsPage( int pgNo, SpectreRenderContext * rndrCtxt ) : QDocumentPage( pgNo ) {
+PsPage::PsPage( int pgNo, SpectreRenderContext *rndrCtxt ) : QDocumentPage( pgNo ) {
     mRenderCtxt = rndrCtxt;
 }
 
@@ -174,12 +174,104 @@ QImage PsPage::render( QSize pSize, QDocumentRenderOptions opts ) const {
     qreal wZoom = 1.0 * pSize.width() / mPageSize.width();
     qreal hZoom = 1.0 * pSize.height() / mPageSize.height();
 
-    return render( (int)72 * wZoom, (int)72 * hZoom, opts );
+    switch ( opts.rotation() ) {
+        case QDocumentRenderOptions::Rotate90: {
+            [[fallthrough]];
+        }
+
+        case QDocumentRenderOptions::Rotate270: {
+            std::swap( wZoom, hZoom );
+            break;
+        }
+
+        default: {
+            break;
+        }
+    }
+
+    spectre_render_context_set_scale( mRenderCtxt, wZoom, hZoom );
+
+    switch ( opts.rotation() ) {
+        default:
+        case QDocumentRenderOptions::Rotate0: {
+            spectre_render_context_set_rotation( mRenderCtxt, 0 );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate90: {
+            spectre_render_context_set_rotation( mRenderCtxt, 90 );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate180: {
+            spectre_render_context_set_rotation( mRenderCtxt, 180 );
+            break;
+        }
+
+        case QDocumentRenderOptions::Rotate270: {
+            spectre_render_context_set_rotation( mRenderCtxt, 270 );
+            break;
+        }
+    }
+
+    int w = pSize.width();
+    int h = pSize.height();
+
+    if ( (opts.rotation() == QDocumentRenderOptions::Rotate90) || (opts.rotation() == QDocumentRenderOptions::Rotate270) ) {
+        qSwap( w, h );
+    }
+
+    unsigned char *pageData = 0;
+    int           rowLength = 0;
+
+    spectre_page_render( mPage, mRenderCtxt, &pageData, &rowLength );
+
+    if ( spectre_page_status( mPage ) != SPECTRE_STATUS_SUCCESS ) {
+        free( pageData );
+        pageData = 0;
+
+        return QImage();
+    }
+
+    /**
+     * Okular, which renders PS documents properly, states:
+     * Qt needs the missing alpha of QImage::Format_RGB32 to be 0xff
+     */
+    if ( pageData && (pageData[ 3 ] != 0xff) ) {
+        for ( int i = 3; i < rowLength * h; i += 4 ) {
+            pageData[ i ] = 0xff;
+        }
+    }
+
+    QImage aux;
+
+    if ( rowLength == w * 4 ) {
+        aux = QImage( pageData, w, h, QImage::Format_RGB32 );
+    }
+
+    else {
+        aux = QImage( pageData, rowLength / 4, h, QImage::Format_RGB32 );
+    }
+
+    QImage   image( w, h, QImage::Format_RGB32 );
+    QPainter painter( &image );
+
+    qreal dx = (w > aux.width() ? (w - aux.width() ) / 2.0 : 0);
+    qreal dy = (w > aux.height() ? (w - aux.height() ) / 2.0 : 0);
+
+    painter.drawImage( QPointF( dx, dy ), aux );
+
+    painter.end();
+
+    free( pageData );
+    pageData = nullptr;
+
+    return image;
 }
 
 
 QImage PsPage::render( qreal zoomFactor, QDocumentRenderOptions opts ) const {
-    return render( (int)72 * zoomFactor, (int)72 * zoomFactor, opts );
+    return render( round( 72 * zoomFactor ), round( 72 * zoomFactor ), opts );
 }
 
 
@@ -246,8 +338,35 @@ QImage PsPage::render( int dpiX, int dpiY, QDocumentRenderOptions opts ) const {
         return QImage();
     }
 
-    QImage auxiliaryImage( pageData, rowLength / 4, h, QImage::Format_RGB32 );
-    QImage image( auxiliaryImage.copy( 0, 0, w, h ) );
+    /**
+     * Okular, which renders PS documents properly, states:
+     * Qt needs the missing alpha of QImage::Format_RGB32 to be 0xff
+     */
+    if ( pageData && (pageData[ 3 ] != 0xff) ) {
+        for ( int i = 3; i < rowLength * h; i += 4 ) {
+            pageData[ i ] = 0xff;
+        }
+    }
+
+    QImage aux;
+
+    if ( rowLength == w * 4 ) {
+        aux = QImage( pageData, w, h, QImage::Format_RGB32 );
+    }
+
+    else {
+        aux = QImage( pageData, rowLength / 4, h, QImage::Format_RGB32 );
+    }
+
+    QImage   image( w, h, QImage::Format_RGB32 );
+    QPainter painter( &image );
+
+    qreal dx = (w > aux.width() ? (w - aux.width() ) / 2.0 : 0);
+    qreal dy = (w > aux.height() ? (w - aux.height() ) / 2.0 : 0);
+
+    painter.drawImage( QPointF( dx, dy ), aux );
+
+    painter.end();
 
     free( pageData );
     pageData = nullptr;

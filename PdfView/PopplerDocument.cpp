@@ -201,6 +201,21 @@ QImage PdfPage::render( QSize pSize, QDocumentRenderOptions opts ) const {
     qreal wZoom = 1.0 * pSize.width() / m_page->pageSizeF().width();
     qreal hZoom = 1.0 * pSize.height() / m_page->pageSizeF().height();
 
+    switch ( opts.rotation() ) {
+        case QDocumentRenderOptions::Rotate90: {
+            [[fallthrough]];
+        }
+
+        case QDocumentRenderOptions::Rotate270: {
+            std::swap( wZoom, hZoom );
+            break;
+        }
+
+        default: {
+            break;
+        }
+    }
+
     return m_page->renderToImage( 72 * wZoom, 72 * hZoom, -1, -1, -1, -1, ( Poppler::Page::Rotation )opts.rotation() );
 }
 
@@ -211,7 +226,7 @@ QImage PdfPage::render( qreal zoomFactor, QDocumentRenderOptions opts ) const {
 
 
 QImage PdfPage::render( int dpiX, int dpiY, QDocumentRenderOptions opts ) const {
-    return render( dpiX / 72.0, dpiY / 72.0, opts );
+    return m_page->renderToImage( dpiX, dpiY, -1, -1, -1, -1, ( Poppler::Page::Rotation )opts.rotation() );
 }
 
 
