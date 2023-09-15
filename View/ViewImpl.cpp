@@ -32,6 +32,11 @@
 #include <QScrollBar>
 #include <QScroller>
 
+#include <QPrinter>
+#include <QPrintEngine>
+
+#include <cups/cups.h>
+#include <cups/ppd.h>
 
 QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
     publ       = view;                                 // Pointer to the public class
@@ -144,7 +149,7 @@ void QDocumentViewImpl::updateScrollBars() {
     int vMax = v.height() - p.height();
     int hMax = v.width() - p.width();
 
-    vScroll->setRange( 0, vMax );
+    vScroll->setRange( 0, vMax + mToolBarHeight );
     vScroll->setPageStep( p.height() );
     vScroll->setValue( vPos * vMax );
 
@@ -1104,4 +1109,318 @@ void QDocumentViewImpl::makePointVisible( QPointF pt, QRectF pageGeometry ) {
             publ->horizontalScrollBar()->setValue( publ->horizontalScrollBar()->value() - 1 );
         }
     }
+}
+
+
+bool QDocumentViewImpl::printUsingLp( QPrinter *printer, QDocumentPrintOptions opts ) {
+    QString exe;
+
+    /** lp is the best - it's a nice wrapper around lpr */
+    if ( !QStandardPaths::findExecutable( QStringLiteral( "lp" ) ).isEmpty() ) {
+        exe = QStringLiteral( "lp" );
+    }
+
+    /** This is the next best - lpr */
+    else if ( !QStandardPaths::findExecutable( QStringLiteral( "lpr" ) ).isEmpty() ) {
+        exe = QStringLiteral( "lpr" );
+    }
+
+    /** Alternative names for lpr */
+    else if ( !QStandardPaths::findExecutable( QStringLiteral( "lpr-cups" ) ).isEmpty() ) {
+        exe = QStringLiteral( "lpr-cups" );
+    }
+
+    /** Alternative names for lpr */
+    else if ( !QStandardPaths::findExecutable( QStringLiteral( "lpr.cups" ) ).isEmpty() ) {
+        exe = QStringLiteral( "lpr.cups" );
+    }
+
+    else {
+        return false;
+    }
+
+    /** Destination */
+    QStringList argList;
+
+    argList << (exe == "lp" ? "-d" : "-P") << opts.printerName;
+
+    /** Page Size */
+    argList << "-o" << QString( "media=%1" ).arg( opts.pageLayout.pageSize().name() );
+
+    /** Portrait vs landscape */
+    argList << "-o" << (opts.pageLayout.orientation() == QPageLayout::Portrait ? "portrait" : "landscape");
+
+    /** Set the pages to be printed */
+    if ( opts.pageRange != "all" ) {
+        argList << "-o" << QString( "page-ranges=%1" ).arg( opts.pageRange.replace( " ", "" ) );
+    }
+
+    /** Page set */
+    if ( opts.pageSet != "all" ) {
+        argList << "-o" << QString( "page-set=%1" ).arg( opts.pageSet );
+    }
+
+    /** Number of copies */
+    if ( exe == "lp" ) {
+        argList << "-n" << QString::number( opts.copies );
+    }
+
+    else {
+        argList << QString( "-#%1" ).arg( opts.copies );
+    }
+
+    /** Color mode: grayscale */
+    if ( opts.color == false ) {
+        argList << "-o" << "ColorModel=KGray";
+    }
+
+    /** Collated print */
+    if ( opts.collate ) {
+        argList << "-o" << "collate=true";
+    }
+
+    /** Print first page last */
+    if ( opts.reverse ) {
+        argList << "-o" << "outputorder=reverse";
+    }
+
+    /** Shrink to fit */
+    if ( opts.shrinkToFit ) {
+        argList << "-o" << "fit-to-page";
+    }
+
+    /** Multi-page */
+    argList << "-o" << QString( "number-up=%1" ).arg( opts.pagesPerSheet );
+
+    if ( opts.pagesPerSheet > 1 ) {
+        argList << "-o" << "page-border=single";
+        argList << "-o" << QString( "number-up-layout=%1" ).arg( opts.pageOrder );
+    }
+
+    /** Printer margins */
+    argList << "-o" << QString( "page-left=%1" ).arg( opts.printMargins.left() );
+    argList << "-o" << QString( "page-right=%1" ).arg( opts.printMargins.right() );
+    argList << "-o" << QString( "page-topt=%1" ).arg( opts.printMargins.top() );
+    argList << "-o" << QString( "page-bottom=%1" ).arg( opts.printMargins.bottom() );
+
+    switch ( printer->duplex() ) {
+        case QPrinter::DuplexNone: {
+            argList << "-o" << "sides=one-sided";
+            break;
+        }
+
+        case QPrinter::DuplexAuto: {
+            break;
+        }
+
+        case QPrinter::DuplexLongSide: {
+            argList << "-o" << "sides=two-sided-long-edge";
+            break;
+        }
+
+        case QPrinter::DuplexShortSide: {
+            argList << "-o" << "sides=two-sided-short-edge";
+            break;
+        }
+    }
+
+
+    if ( exe == "lp" ) {
+        argList << "--";
+    }
+
+    argList << mDocument->fileNameAndPath();
+
+    return QProcess::startDetached( exe, argList );
+}
+
+
+bool QDocumentViewImpl::printUsingQt( QPrinter *printer, QDocumentPrintOptions opts ) {
+    /** We need to extract pages from the page-range */
+    QList<int> pages;
+
+    for ( QString range: opts.pageRange.split( ",", Qt::SkipEmptyParts ) ) {
+        /** A range of page nubmers like 54-98 */
+        if ( range.contains( "-" ) ) {
+            QStringList bits = range.split( "-", Qt::SkipEmptyParts );
+            int         from = bits.value( 0 ).toInt() - 1;
+            int         to   = bits.value( 1 ).toInt() - 1;
+            for ( int pg = from; pg <= to; pg++ ) {
+                pages << pg;
+            }
+        }
+
+        /** just a number, like 76 */
+        else {
+            pages << range.toInt() - 1;
+        }
+    }
+
+    QScopedPointer<QProgressDialog> progressDialog( new QProgressDialog( publ ) );
+
+    progressDialog->setLabelText( QString( "Printing '%1'..." ).arg( mDocument->fileName() ) );
+    progressDialog->setRange( 0, pages.count() );
+
+    QPainter painter;
+
+    if ( not painter.begin( printer ) ) {
+        return false;
+    }
+
+    /** Counter for progress dialog */
+    int pg = 1.0;
+
+    for ( int index: pages ) {
+        progressDialog->setValue( index );
+
+        QApplication::processEvents();
+
+        painter.save();
+
+        const QDocumentPage *page = mDocument->page( index );
+
+        qreal scaleFactorX = 1.0;
+        qreal scaleFactorY = 1.0;
+
+        if ( opts.shrinkToFit ) {
+            const qreal shrinkX = printer->pageRect( QPrinter::Point ).width() / page->pageSize().width();
+            const qreal shrinkY = printer->pageRect( QPrinter::Point ).height() / page->pageSize().height();
+
+            const qreal pageWidth  = printer->physicalDpiX() / 72.0 * page->pageSize().width();
+            const qreal pageHeight = printer->physicalDpiY() / 72.0 * page->pageSize().height();
+
+            scaleFactorX = printer->width() / pageWidth * shrinkX;
+            scaleFactorY = printer->height() / pageHeight * shrinkY;
+        }
+
+        else {
+            scaleFactorX = 1.0 * printer->logicalDpiX() / printer->physicalDpiX();
+            scaleFactorY = 1.0 * printer->logicalDpiY() / printer->physicalDpiY();
+        }
+
+        painter.setTransform( QTransform::fromScale( scaleFactorX, scaleFactorY ) );
+        painter.drawImage( QPointF(), page->render( printer->physicalDpiX(), printer->physicalDpiY(), QDocumentRenderOptions() ) );
+
+        painter.restore();
+
+        pg++;
+
+        if ( pg < pages.count() ) {
+            printer->newPage();
+        }
+
+        QApplication::processEvents();
+
+        if ( progressDialog->wasCanceled() ) {
+            printer->abort();
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool QDocumentViewImpl::printUsingCups( QPrinter *printer, QDocumentPrintOptions opts ) {
+#if HAVE_CUPS == 1
+    cups_dest_t *dests    = 0;
+    const int   num_dests = cupsGetDests( &dests );
+
+    cups_dest_t * const dest = cupsGetDest( printer->printerName().toUtf8(), 0, num_dests, dests );
+
+    if ( dest == 0 ) {
+        qWarning() << cupsLastErrorString();
+
+        cupsFreeDests( num_dests, dests );
+
+        return false;
+    }
+
+    cups_option_t *options    = 0;
+    int           num_options = 0;
+
+    for (int index = 0; index < dest->num_options; ++index) {
+        num_options = cupsAddOption( dest->options[ index ].name, dest->options[ index ].value, num_options, &options );
+    }
+
+    const QStringList cupsOptions = printer->printEngine()->property( QPrintEngine::PrintEnginePropertyKey( 0xfe00 ) ).toStringList();
+
+    for (int index = 0; index < cupsOptions.count() - 1; index += 2) {
+        num_options = cupsAddOption( cupsOptions.at( index ).toUtf8(), cupsOptions.at( index + 1 ).toUtf8(), num_options, &options );
+    }
+
+    num_options = cupsAddOption( "copies", QString::number( opts.copies ).toUtf8(), num_options, &options );
+    num_options = cupsAddOption( "Collate", (opts.collate ? "true" : "false"), num_options, &options );
+    num_options = cupsAddOption( "outputorder", (opts.reverse ? "reverse" : "normal"), num_options, &options );
+    num_options = cupsAddOption( "fit-to-page", (opts.shrinkToFit ? "true" : "false"), num_options, &options );
+
+    switch ( opts.pageLayout.orientation() ) {
+        case QPageLayout::Portrait: {
+            num_options = cupsAddOption( "landscape", "false", num_options, &options );
+            break;
+        }
+
+        case QPageLayout::Landscape: {
+            num_options = cupsAddOption( "landscape", "true", num_options, &options );
+            break;
+        }
+    }
+
+    if ( opts.color ) {
+        num_options = cupsAddOption( "Ink", "COLOR", num_options, &options );
+    }
+
+    else {
+        num_options = cupsAddOption( "ColorModel", "Gray", num_options, &options );
+        num_options = cupsAddOption( "Ink", "MONO", num_options, &options );
+    }
+
+    switch ( printer->duplex() ) {
+        case QPrinter::DuplexNone: {
+            num_options = cupsAddOption( "sides", "one-sided", num_options, &options );
+            break;
+        }
+
+        case QPrinter::DuplexAuto: {
+            break;
+        }
+
+        case QPrinter::DuplexLongSide: {
+            num_options = cupsAddOption( "sides", "two-sided-long-edge", num_options, &options );
+            break;
+        }
+
+        case QPrinter::DuplexShortSide: {
+            num_options = cupsAddOption( "sides", "two-sided-short-edge", num_options, &options );
+            break;
+        }
+    }
+
+    num_options = cupsAddOption( "number-up", QString::number( opts.pagesPerSheet ).toUtf8(), num_options, &options );
+    num_options = cupsAddOption( "number-up-layout", opts.pageOrder.toUtf8(), num_options, &options );
+
+    if ( opts.pageSet != "all" ) {
+        num_options = cupsAddOption( "page-set", opts.pageSet.toUtf8(), num_options, &options );
+    }
+
+    if ( opts.pageRange != "all" ) {
+        num_options = cupsAddOption( "page-ranges", QString( "page-ranges=%1" ).arg( opts.pageRange.replace( " ", "" ) ).toUtf8(), num_options, &options );
+    }
+
+    const int jobId = cupsPrintFile( dest->name, QFile::encodeName( mDocument->fileNameAndPath() ), mDocument->fileName().toUtf8(), num_options, options );
+
+    if ( jobId < 1 ) {
+        qWarning() << cupsLastErrorString();
+    }
+
+    cupsFreeDests( num_dests, dests );
+    cupsFreeOptions( num_options, options );
+
+    return jobId >= 1;
+
+#else
+    return false;
+
+#endif
 }

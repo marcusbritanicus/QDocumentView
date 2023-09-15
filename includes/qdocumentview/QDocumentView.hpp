@@ -25,6 +25,7 @@
 
 #include <QDocument.hpp>
 #include <QDocumentRenderOptions.hpp>
+#include <QDocumentPrintOptions.hpp>
 
 class QPrinter;
 
@@ -35,11 +36,6 @@ class QDocumentNavigation;
 class QDocumentRenderer;
 class QDocumentView;
 class QDocumentViewImpl;
-
-class QDocumentPrintOptions {
-    public:
-        bool fitToPage = false;
-};
 
 class QDocumentView : public QAbstractScrollArea {
     Q_OBJECT;
@@ -109,7 +105,7 @@ class QDocumentView : public QAbstractScrollArea {
         bool showToolsOSD() const;
         void setShowToolsOSD( bool );
 
-        bool print( QPrinter *printer, QDocumentPrintOptions opts, QList<int> pages );
+        bool print( QPrinter *printer, QDocumentPrintOptions opts );
 
     public Q_SLOTS:
         void setLayoutContinuous( bool );

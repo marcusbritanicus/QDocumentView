@@ -38,6 +38,9 @@ endif
 DjVuLibre  = dependency( 'ddjvuapi', required: false )
 LibSpectre = dependency( 'libspectre', required: false )
 
+Cups       = dependency( 'cups', required: false )
+add_project_arguments( '-DHAVE_CUPS=@0@'.format( Cups.found() ), language : 'cpp' )
+
 Deps     = [ QtBase, QtPrint, Poppler ]
 Requires = [ Poppler, ]
 
@@ -81,6 +84,11 @@ if LibSpectre.found()
 	Requires += [ LibSpectre, ]
 	Headers  += [ 'includes/qdocumentview/PsDocument.hpp', ]
 	Sources  += [ 'PsView/PsDocument.cpp', ]
+endif
+
+if Cups.found()
+	Deps     += [ Cups, ]
+	Requires += [ Cups, ]
 endif
 
 Mocs = Qt.compile_moc(

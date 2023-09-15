@@ -38,6 +38,8 @@
 #include <QScroller>
 #include <QPrinter>
 
+
+
 QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) {
     impl = new QDocumentViewImpl( this );
 
@@ -658,11 +660,16 @@ void QDocumentView::setShowToolsOSD( bool yes ) {
 
         toolBar->move( 0, viewport()->height() - toolBar->height() );
         toolBar->setFixedWidth( viewport()->width() );
+
+        impl->mToolBarHeight = toolBar->height();
     }
 
     else {
         toolBar->hide();
+        impl->mToolBarHeight = 0;
     }
+
+    impl->updateScrollBars();
 }
 
 
@@ -817,63 +824,19 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
 }
 
 
-bool QDocumentView::print( QPrinter *printer, QDocumentPrintOptions opts, QList<int> pages ) {
-    QScopedPointer<QProgressDialog> progressDialog( new QProgressDialog( this ) );
-
-    progressDialog->setLabelText( tr( "Printing '%1'..." ).arg( impl->mDocument->fileName() ) );
-    progressDialog->setRange( 1, pages.length() );
-
-    QPainter painter;
-
-    if ( !painter.begin( printer ) ) {
-        return false;
+bool QDocumentView::print( QPrinter *printer, QDocumentPrintOptions opts ) {
+    /** We have CUPS, so let's use it */
+    if ( HAVE_CUPS ) {
+        return impl->printUsingCups( printer, opts );
     }
 
-    int pg = 1;
-
-    for ( int index: pages ) {
-        progressDialog->setValue( index );
-
-        QApplication::processEvents();
-
-        painter.save();
-
-        const QDocumentPage *page = impl->mDocument->page( index );
-
-        if ( opts.fitToPage ) {
-            const qreal pageWidth  = printer->physicalDpiX() / 72.0 * page->pageSize().width();
-            const qreal pageHeight = printer->physicalDpiY() / 72.0 * page->pageSize().width();
-
-            const qreal scaleFactor = qMin( printer->width() / pageWidth, printer->height() / pageHeight );
-
-            painter.setTransform( QTransform::fromScale( scaleFactor, scaleFactor ) );
-        }
-
-        else {
-            const qreal scaleFactorX = static_cast<qreal>(printer->logicalDpiX() ) / static_cast<qreal>(printer->physicalDpiX() );
-            const qreal scaleFactorY = static_cast<qreal>(printer->logicalDpiY() ) / static_cast<qreal>(printer->physicalDpiY() );
-
-            painter.setTransform( QTransform::fromScale( scaleFactorX, scaleFactorY ) );
-        }
-
-        painter.drawImage( QPointF(), page->render( QSize( printer->physicalDpiX(), printer->physicalDpiY() ), QDocumentRenderOptions() ) );
-
-        painter.restore();
-
-        pg++;
-
-        if ( pg < pages.count() ) {
-            printer->newPage();
-        }
-
-        QApplication::processEvents();
-
-        if ( progressDialog->wasCanceled() ) {
-            printer->abort();
-
-            return false;
-        }
+    /** We need to decide between Cups and LPR */
+    else if ( false ) {
+        return impl->printUsingLp( printer, opts );
     }
 
-    return true;
+    /** This is the fallback. This will be the slowest. */
+    else {
+        return impl->printUsingQt( printer, opts );
+    }
 }

@@ -23,6 +23,7 @@
 
 #include <QThread>
 #include <QPointer>
+#include <QDocumentPrintOptions.hpp>
 
 class QDocumentNavigation;
 class QDocumentRenderer;
@@ -116,6 +117,16 @@ class QDocumentViewImpl {
         void makePointVisible( QPointF, QRectF );
         void makeRegionVisible( QRectF, QRectF );
 
+        /** Use the program LP/LPR to do the printing */
+        bool printUsingLp( QPrinter *printer, QDocumentPrintOptions opts );
+
+        /** Use Our own algorithm to do the printing */
+        bool printUsingQt( QPrinter *printer, QDocumentPrintOptions opts );
+
+        /** Use libcups to do the printing */
+        bool printUsingCups( QPrinter *printer, QDocumentPrintOptions opts );
+
+        /** Variables */
         QDocument *mDocument = nullptr;
         QDocumentNavigation *mPageNavigation = nullptr;
         QDocumentRenderer *mPageRenderer     = nullptr;
@@ -130,6 +141,7 @@ class QDocumentViewImpl {
 
         int mPageSpacing;
         QMargins mDocumentMargins;
+        int mToolBarHeight = 36;
 
         bool mBlockPageScrolling;
 
