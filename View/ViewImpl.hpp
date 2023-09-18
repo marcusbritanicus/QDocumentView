@@ -23,7 +23,8 @@
 
 #include <QThread>
 #include <QPointer>
-#include <QDocumentPrintOptions.hpp>
+#include <qdocumentview/QDocumentPrintOptions.hpp>
+#include <qdocumentview/QDocumentPluginInterface.hpp>
 
 class QDocumentNavigation;
 class QDocumentRenderer;
@@ -125,6 +126,10 @@ class QDocumentViewImpl {
 
         /** Use libcups to do the printing */
         bool printUsingCups( QPrinter *printer, QDocumentPrintOptions opts );
+
+        /** Plugin loading */
+        QStringList getPlugins();
+        QDocumentPluginInterface * findSupportedPlugin( QString );
 
         /** Variables */
         QDocument *mDocument = nullptr;

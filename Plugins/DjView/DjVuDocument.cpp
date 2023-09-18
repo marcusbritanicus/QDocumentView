@@ -19,7 +19,7 @@
  * MA 02110-1301, USA.
  **/
 
-#include <qdocumentview/DjVuDocument.hpp>
+#include "DjVuDocument.hpp"
 
 DjVuDocument::DjVuDocument( QString pdfPath ) : QDocument( pdfPath ) {
     mDjDoc = nullptr;

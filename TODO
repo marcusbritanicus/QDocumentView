@@ -1,13 +1,21 @@
 # QDocumentView
 
-□ Add support for (E)PS (libspectre), epub (libepub), cbz, cbr, etc
-□ Support for search rect/and highlight colors
-□ Redesign the GUI. Use a bottom panel like in DesQ::Eye::View for zoom, page nav and search.
+☑ Add support for (E)PS (libspectre), epub (libepub), cbz, cbr, etc
+☑ Support for search rect/and highlight colors
+☑ Redesign the GUI. Use a bottom panel like in DesQ::Eye::View for zoom, page nav and search.
+
+□ Search list gui
+☑ Internal checks if QDV was compiled with djvu/spectre support
+⚡ Develop plugin support
+	☑ Push djvu/spectre support into plugins
+	⚡ Based on okular, develop comicbook, epub, html, text, chm, dvi, etc.
+	  See the generators folder of okular sources for full list.
+	  This will be a separate repo, qdocumentview-plugins
 
 
 Note:
-	✍ - Work in progress
-	□ - Work to be started
-	✓ - Work Completed
-	✗ - Not working on this
+	⚡ - Work in progress
+	☐ - Work to be started
+	☑ - Work Completed
+	☓ - Not working on this
 	◐ - Partially complete

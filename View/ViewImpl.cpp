@@ -60,12 +60,13 @@ QDocumentViewImpl::QDocumentViewImpl( QDocumentView *view ) {
 
 
 QDocumentViewImpl::~QDocumentViewImpl() {
-    delete mDocument;
     delete mPageNavigation;
     delete mPageRenderer;
 
     mSearchThread->stop();
     delete mSearchThread;
+
+    delete mDocument;
 }
 
 
@@ -1423,4 +1424,49 @@ bool QDocumentViewImpl::printUsingCups( QPrinter *printer, QDocumentPrintOptions
     return false;
 
 #endif
+}
+
+
+QStringList QDocumentViewImpl::getPlugins() {
+    QStringList pluginPaths = qEnvironmentVariable( "QDV_PLUGIN_PATHS" ).split( ":" );
+
+    pluginPaths.prepend( QDV_PLUGIN_PATH );
+
+    QStringList plugins;
+
+    for ( QString path: pluginPaths ) {
+        QDir pDir( path );
+        for ( QString plugin: pDir.entryList( QStringList() << "*.so", QDir::Files ) ) {
+            plugins << pDir.filePath( plugin );
+        }
+    }
+
+    return plugins;
+}
+
+
+QDocumentPluginInterface * QDocumentViewImpl::findSupportedPlugin( QString path ) {
+    QStringList pluginsPaths = getPlugins();
+    QString     ext          = QFileInfo( path ).suffix();
+
+    for ( QString pluginPath: pluginsPaths ) {
+        QPluginLoader loader( pluginPath );
+        QObject       *pObject = loader.instance();
+
+        if ( pObject ) {
+            QDocumentPluginInterface *plugin = qobject_cast<QDocumentPluginInterface *>( pObject );
+
+            if ( plugin->supportedExtensions().contains( ext ) ) {
+                return plugin;
+            }
+
+            /** Also add the code to check mimetypes */
+        }
+
+        else {
+            qWarning() << loader.errorString();
+        }
+    }
+
+    return nullptr;
 }

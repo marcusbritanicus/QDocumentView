@@ -12,7 +12,9 @@ project(
 	],
 )
 
-add_project_arguments( '-DPROJECT_VERSION=' + meson.project_version(), language : 'cpp' )
+add_project_arguments( '-DPROJECT_VERSION="v@0@"'.format( meson.project_version() ), language : 'cpp' )
+add_project_arguments( '-DQDV_PLUGIN_PATH="@0@"'.format( join_paths( get_option( 'prefix' ), get_option( 'libdir' ), 'qdocumentview', 'plugins' ) ), language : 'cpp' )
+
 add_project_link_arguments( ['-rdynamic','-fPIC'], language:'cpp' )
 
 if get_option('use_qt_version') == 'qt5'
@@ -52,6 +54,7 @@ Headers = [
     'includes/qdocumentview/QDocumentSearch.hpp',
     'includes/qdocumentview/QDocumentView.hpp',
     'includes/qdocumentview/PopplerDocument.hpp',
+    'includes/qdocumentview/QDocumentPluginInterface.hpp',
 ]
 
 ImplHeaders = [
@@ -72,20 +75,6 @@ Sources = [
     'View/ViewToolbar.cpp',
 ]
 
-if DjVuLibre.found()
-	Deps     += [ DjVuLibre, ]
-	Requires += [ DjVuLibre, ]
-	Headers  += [ 'includes/qdocumentview/DjVuDocument.hpp', ]
-	Sources  += [ 'DjView/DjVuDocument.cpp', ]
-endif
-
-if LibSpectre.found()
-	Deps     += [ LibSpectre, ]
-	Requires += [ LibSpectre, ]
-	Headers  += [ 'includes/qdocumentview/PsDocument.hpp', ]
-	Sources  += [ 'PsView/PsDocument.cpp', ]
-endif
-
 if Cups.found()
 	Deps     += [ Cups, ]
 	Requires += [ Cups, ]
@@ -95,7 +84,7 @@ Mocs = Qt.compile_moc(
 	headers : [ Headers, ImplHeaders ],
 	dependencies: Deps
 )
-Includes = [ 'includes', 'includes/qdocumentview', 'Document', 'View' ]
+Includes = include_directories( [ 'includes', 'includes/qdocumentview', 'Document', 'View' ] )
 
 qdocview = shared_library(
     libName, [ Sources, Mocs ],
@@ -106,16 +95,9 @@ qdocview = shared_library(
     install_dir: join_paths( get_option( 'libdir' ) )
 )
 
-install_headers( Headers, subdir: subdirname )
+subdir( 'Plugins' )
 
-summary = [
-	'',
-	'-------------------',
-	'QDocumentView @0@'.format( meson.project_version() ),
-	'-------------------',
-	''
-]
-message( '\n'.join( summary ) )
+install_headers( Headers, subdir: subdirname )
 
 ## PkgConfig Section
 pkgconfig = import( 'pkgconfig' )

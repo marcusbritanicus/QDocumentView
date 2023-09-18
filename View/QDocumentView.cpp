@@ -26,8 +26,9 @@
 #include <qdocumentview/QDocumentNavigation.hpp>
 
 #include <qdocumentview/PopplerDocument.hpp>
-#include <qdocumentview/DjVuDocument.hpp>
-#include <qdocumentview/PsDocument.hpp>
+#include <qdocumentview/QDocumentPluginInterface.hpp>
+
+#include <QtPlugin>
 
 #include "ViewImpl.hpp"
 #include "ViewToolbar.hpp"
@@ -217,21 +218,28 @@ QDocumentView::~QDocumentView() {
 QDocument * QDocumentView::load( QString path ) {
     QDocument *doc;
 
+    /** Inbuilt support */
     if ( path.toLower().endsWith( "pdf" ) ) {
         doc = new PopplerDocument( path );
     }
 
-    else if ( path.toLower().endsWith( "djv" ) or path.toLower().endsWith( "djvu" ) ) {
-        doc = new DjVuDocument( path );
-    }
-
-    else if ( path.toLower().endsWith( "eps" ) or path.toLower().endsWith( "ps" ) ) {
-        doc = new PsDocument( path );
-    }
-
+    /** Support via plugins */
     else {
-        qWarning() << "Unknown document type:" << path;
-        return nullptr;
+        QDocumentPluginInterface *plugin = impl->findSupportedPlugin( path );
+
+        if ( plugin != nullptr ) {
+            doc = plugin->document( path );
+
+            /** The plugin was not able to load the document */
+            if ( doc == nullptr ) {
+                return nullptr;
+            }
+        }
+
+        else {
+            qWarning() << "Unknown document type:" << path;
+            return nullptr;
+        }
     }
 
     progress->show();

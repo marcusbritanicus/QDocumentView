@@ -19,7 +19,7 @@
  * MA 02110-1301, USA.
  **/
 
-#include <qdocumentview/PsDocument.hpp>
+#include "PsDocument.hpp"
 
 PsDocument::PsDocument( QString psPath ) : QDocument( psPath ) {
     mPsDoc = nullptr;
