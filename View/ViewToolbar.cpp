@@ -77,25 +77,38 @@ ViewToolbar::ViewToolbar( QWidget *parent ) : QWidget( parent ) {
     /** Nothing to search */
     setSearchButtonsEnabled( false );
 
-    QHBoxLayout *lyt = new QHBoxLayout();
+    QGridLayout *lyt = new QGridLayout();
     lyt->setContentsMargins( 2, 2, 2, 2 );
 
-    lyt->addWidget( mZoomInBtn );
-    lyt->addWidget( mZoomLbl );
-    lyt->addWidget( mZoomOutBtn );
+    QHBoxLayout *zlyt = new QHBoxLayout();
+    zlyt->setContentsMargins( QMargins() );
 
-    lyt->addStretch();
+    zlyt->addWidget( mZoomInBtn );
+    zlyt->addWidget( mZoomLbl );
+    zlyt->addWidget( mZoomOutBtn );
+    zlyt->addStretch();
 
-    lyt->addWidget( mPagePrevBtn );
-    lyt->addWidget( mPageLE );
-    lyt->addWidget( mPageLbl );
-    lyt->addWidget( mPageNextBtn );
+    QHBoxLayout *plyt = new QHBoxLayout();
+    plyt->setContentsMargins( QMargins() );
 
-    lyt->addStretch();
+    plyt->addStretch();
+    plyt->addWidget( mPagePrevBtn );
+    plyt->addWidget( mPageLE );
+    plyt->addWidget( mPageLbl );
+    plyt->addWidget( mPageNextBtn );
+    plyt->addStretch();
 
-    lyt->addWidget( mSearchPrevBtn );
-    lyt->addWidget( mSearchLE );
-    lyt->addWidget( mSearchNextBtn );
+    QHBoxLayout *slyt = new QHBoxLayout();
+    slyt->setContentsMargins( QMargins() );
+
+    slyt->addStretch();
+    slyt->addWidget( mSearchPrevBtn );
+    slyt->addWidget( mSearchLE );
+    slyt->addWidget( mSearchNextBtn );
+
+    lyt->addLayout( zlyt, 0, 0, Qt::AlignLeft | Qt::AlignVCenter );
+    lyt->addLayout( plyt, 0, 1, Qt::AlignCenter );
+    lyt->addLayout( slyt, 0, 2, Qt::AlignRight | Qt::AlignVCenter );
 
     setLayout( lyt );
 
