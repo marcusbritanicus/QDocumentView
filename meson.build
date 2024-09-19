@@ -51,6 +51,7 @@ Headers = [
     'includes/qdocumentview/QDocumentNavigation.hpp',
     'includes/qdocumentview/QDocumentRenderer.hpp',
     'includes/qdocumentview/QDocumentRenderOptions.hpp',
+    'includes/qdocumentview/QDocumentPrintOptions.hpp',
     'includes/qdocumentview/QDocumentSearch.hpp',
     'includes/qdocumentview/QDocumentView.hpp',
     'includes/qdocumentview/PopplerDocument.hpp',

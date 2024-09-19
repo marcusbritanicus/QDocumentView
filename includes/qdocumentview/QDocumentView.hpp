@@ -129,6 +129,7 @@ class QDocumentView : public QAbstractScrollArea {
         /** Search signals */
         void matchesFound( int numMatches );
         void searchComplete( int numMatches );
+        void searchHighlightChanged();
 
     protected:
         /** We want to draw our pages */
@@ -147,10 +148,10 @@ class QDocumentView : public QAbstractScrollArea {
         void wheelEvent( QWheelEvent *wEvent ) override;
 
     private:
-        QDocumentViewImpl *impl;
+        QDocumentViewImpl *impl = nullptr;
 
-        ViewToolbar *toolBar;
-        bool showToolBar;
+        ViewToolbar *toolBar = nullptr;
+        bool showToolBar     = true;
 
-        QProgressBar *progress;
+        QProgressBar *progress = nullptr;
 };

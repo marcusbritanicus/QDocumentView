@@ -50,8 +50,15 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
 
     /** Update our inbuilt toolbar */
     connect(
-        impl->mSearchThread, &QDocumentSearch::matchesFound, [ = ] () {
+        impl->mSearchThread, &QDocumentSearch::matchesFound, [ = ] ( int matches ) {
             /** If we have more than one match, we can enable the search buttons */
+            if ( matches ) {
+                toolBar->setSearchButtonsEnabled( true );
+            }
+
+            else {
+                toolBar->setSearchButtonsEnabled( false );
+            }
         }
     );
 
@@ -633,6 +640,8 @@ void QDocumentView::clearSearch() {
 void QDocumentView::highlightNextSearchInstance() {
     impl->highlightNextSearchInstance();
 
+    emit searchHighlightChanged();
+
     /** The Next search rect has been highlighted. Now redraw. */
     viewport()->update();
 }
@@ -640,6 +649,8 @@ void QDocumentView::highlightNextSearchInstance() {
 
 void QDocumentView::highlightPreviousSearchInstance() {
     impl->highlightPreviousSearchInstance();
+
+    emit searchHighlightChanged();
 
     /** The Previous search rect has been highlighted. Now redraw. */
     viewport()->update();
@@ -725,7 +736,9 @@ void QDocumentView::resizeEvent( QResizeEvent *event ) {
     }
 
     if ( impl->mDocument ) {
-        toolBar->setEnabled( true );
+        if ( showToolBar ) {
+            toolBar->show();
+        }
 
         impl->updateScrollBars();
 
@@ -744,7 +757,7 @@ void QDocumentView::resizeEvent( QResizeEvent *event ) {
     }
 
     else {
-        toolBar->setDisabled( true );
+        toolBar->hide();
     }
 }
 
@@ -815,14 +828,16 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
     if ( wEvent->modifiers() & Qt::ControlModifier ) {
         QPoint numDegrees = wEvent->angleDelta() / 8;
 
-        int steps = numDegrees.y() / 15;
-
-        if ( steps > 0 ) {
+        if ( numDegrees.y() > 0 ) {
             setZoomFactor( impl->mZoomFactor * 1.10 );
         }
 
-        else {
+        else if ( numDegrees.y() < 0 ) {
             setZoomFactor( impl->mZoomFactor / 1.10 );
+        }
+
+        else {
+            qDebug() << "Ha! Ha! Ha!";
         }
 
         return;
