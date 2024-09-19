@@ -299,8 +299,12 @@ void ViewToolbar::setupAnimationEffects() {
     connect(
         opDownTimer, &QTimer::timeout, [ = ]() mutable {
             if ( mSearchLE->hasFocus() ) {
+                opDownTimer->setInterval( 5000 );
+                opDownTimer->start();
+
                 return;
             }
+
             mOpacity -= 0.05;
             opacity->setOpacity( mOpacity );
             QCoreApplication::processEvents();
