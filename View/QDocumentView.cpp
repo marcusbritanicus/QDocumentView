@@ -855,7 +855,7 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
         }
 
         else {
-            qDebug() << "Ha! Ha! Ha!";
+            // Nothing to be done here
         }
 
         return;
