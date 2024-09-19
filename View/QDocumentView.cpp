@@ -39,8 +39,6 @@
 #include <QScroller>
 #include <QPrinter>
 
-
-
 QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) {
     impl = new QDocumentViewImpl( this );
 

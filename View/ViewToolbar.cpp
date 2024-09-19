@@ -298,6 +298,9 @@ void ViewToolbar::setupAnimationEffects() {
     /** On timeout, start that actual dulling process. */
     connect(
         opDownTimer, &QTimer::timeout, [ = ]() mutable {
+            if ( mSearchLE->hasFocus() ) {
+                return;
+            }
             mOpacity -= 0.05;
             opacity->setOpacity( mOpacity );
             QCoreApplication::processEvents();

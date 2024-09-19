@@ -16,8 +16,8 @@ A simple widget to display paged documents, like PDF, DjVu and so on.. Currently
   * Git: `git clone https://gitlab.com/marcusbritanicus/qdocumentview.git qdocumentview`
 - Enter the `qdocumentview` folder
   * `cd qdocumentview`
-- Configure the project - we use meson for project management
-  * `meson .build --prefix=/usr --buildtype=release`
+- Configure the project - we use meson for project management. Add `-Duse_qt_version=qt6` to the command below for the Qt6 version.
+  * `meson setup .build --prefix=/usr --buildtype=release`
 - Compile and install - we use ninja
   * `ninja -C .build -k 0 -j $(nproc) && sudo ninja -C .build install`
 
