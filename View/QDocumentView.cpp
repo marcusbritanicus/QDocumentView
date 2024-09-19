@@ -843,6 +843,24 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
         return;
     }
 
+    else if ( qApp->mouseButtons() == Qt::RightButton ) {
+        QPoint numDegrees = wEvent->angleDelta() / 8;
+
+        if ( numDegrees.y() > 0 ) {
+            setZoomFactor( impl->mZoomFactor * 1.10 );
+        }
+
+        else if ( numDegrees.y() < 0 ) {
+            setZoomFactor( impl->mZoomFactor / 1.10 );
+        }
+
+        else {
+            qDebug() << "Ha! Ha! Ha!";
+        }
+
+        return;
+    }
+
     QAbstractScrollArea::wheelEvent( wEvent );
 }
 
