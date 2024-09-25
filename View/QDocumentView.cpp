@@ -93,6 +93,9 @@ QDocumentView::QDocumentView( QWidget *parent ) : QAbstractScrollArea( parent ) 
             else {
                 impl->highlightSearchInstanceInCurrentPage();
             }
+
+            /** Now, we're ready for page repaints */
+            viewport()->update();
         }
     );
 
@@ -460,6 +463,7 @@ void QDocumentView::setZoomMode( ZoomMode mode ) {
 
     impl->mZoomMode = mode;
     impl->invalidateDocumentLayout();
+    viewport()->update();
 
     if ( impl->mZoomMode == CustomZoom ) {
         toolBar->setZoomButtonsEnabled( impl->mZoomFactor < 4.0 ? true : false, impl->mZoomFactor > 0.1 ? true : false );
@@ -857,6 +861,29 @@ void QDocumentView::wheelEvent( QWheelEvent *wEvent ) {
         }
 
         return;
+    }
+
+    else if ( impl->mContinuous == false ) {
+        if ( wEvent->angleDelta().y() % 20 < 0 ) {
+            /** We're at the bottom of this page */
+            if ( verticalScrollBar()->value() == verticalScrollBar()->maximum() ) {
+                /** Goto next page if there is one. */
+                if ( impl->mPageNavigation->canGoToNextPage() ) {
+                    impl->mPageNavigation->goToNextPage();
+                }
+            }
+        }
+
+        else if ( wEvent->angleDelta().y() % 20 > 0 ) {
+            /** We're at the top of this page */
+            if ( verticalScrollBar()->value() == verticalScrollBar()->minimum() ) {
+                /** Goto previous page if there is one. */
+                if ( impl->mPageNavigation->canGoToPreviousPage() ) {
+                    impl->mPageNavigation->goToPreviousPage();
+                    verticalScrollBar()->setValue( verticalScrollBar()->maximum() );
+                }
+            }
+        }
     }
 
     QAbstractScrollArea::wheelEvent( wEvent );
